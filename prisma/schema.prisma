@@ -1,0 +1,158 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id               String          @id @default(cuid())
+  email            String          @unique @default("learner@javatrainer.dev")
+  name             String          @default("Java Warrior")
+  currentLevel     Int             @default(0) // 0 to 7
+  dailyGoal        Int             @default(5)
+  currentStreak    Int             @default(0)
+  longestStreak    Int             @default(0)
+  lastActiveDate   DateTime?
+  totalSolved      Int             @default(0)
+  totalAttempted   Int             @default(0)
+  accuracy         Float           @default(0.0)
+  averageTimeSec   Int             @default(0)
+  fastestSolveSec  Int             @default(0)
+  
+  // Relations
+  submissions      Submission[]
+  topicProgress    TopicProgress[]
+  mistakes         MistakeRecord[]
+  dailyActivities  DailyActivity[]
+  aiConversations  AIConversation[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}
+
+model Topic {
+  id               String          @id
+  name             String
+  slug             String          @unique
+  level            Int             // 0: Core Java, 1: Logic, 2: Arrays, etc.
+  description      String
+  orderIndex       Int             @default(0)
+  conceptNotes     String          // Markdown notes
+  questions        Question[]
+  topicProgress    TopicProgress[]
+}
+
+model Question {
+  id               String          @id
+  slug             String          @unique
+  title            String
+  difficulty       String          // BEGINNER, EASY, MEDIUM, PLACEMENT, INTERVIEW
+  level            Int             // 0 to 7
+  topicId          String
+  topic            Topic           @relation(fields: [topicId], references: [id])
+  orderIndex       Int             @default(0)
+  conceptTested    String
+  problemStatement String          // Markdown
+  constraints      String          // Markdown or list
+  inputFormat      String
+  outputFormat     String
+  examples         String          // JSON: [{ input: "...", output: "...", explanation: "..." }]
+  starterCode      String
+  expectedClass    String          @default("Solution")
+  expectedMethod   String          @default("solve")
+  visibleTests     String          // JSON: [{ input: "...", expected: "...", id: 1 }]
+  hiddenTests      String          // JSON: [{ input: "...", expected: "...", id: 101 }]
+  expectedTime     String          @default("O(N)")
+  expectedSpace    String          @default("O(1)")
+  simpleSolution   String
+  simpleExplanation String
+  optimalSolution  String
+  optimalExplanation String
+  dryRunSteps      String?         // JSON: [{ step: 1, state: "a=5, b=2", desc: "Init" }]
+  commonMistakes   String          // JSON: ["Using i<=n causing out of bounds", "Confusing char with String"]
+  
+  submissions      Submission[]
+  mistakes         MistakeRecord[]
+  aiConversations  AIConversation[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}
+
+model Submission {
+  id               String          @id @default(cuid())
+  userId           String
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId       String
+  question         Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  attemptNumber    Int             @default(1)
+  code             String
+  status           String          // ACCEPTED, WRONG_ANSWER, COMPILE_ERROR, RUNTIME_ERROR, TIME_LIMIT
+  timeTakenSec     Int             @default(0)
+  executionTimeMs  Int             @default(0)
+  memoryKb         Int             @default(0)
+  passedTests      Int             @default(0)
+  totalTests       Int             @default(0)
+  compileErrorMsg  String?
+  runtimeErrorMsg  String?
+  failedTestInfo   String?         // JSON: { input: "...", expected: "...", actual: "..." }
+  hintsUsedCount   Int             @default(0)
+  solutionViewed   Boolean         @default(false)
+  mistakeTags      String?         // JSON array of strings
+  createdAt        DateTime        @default(now())
+}
+
+model MistakeRecord {
+  id               String          @id @default(cuid())
+  userId           String
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId       String
+  question         Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  category         String          // ARRAY_BOUNDS, STRING_CHAR_CONFUSION, LOOP_INCREMENT, DIGIT_EXTRACTION, OFF_BY_ONE, SYNTAX, LOGIC
+  codeSnippet      String?
+  errorExplanation String
+  resolved         Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+}
+
+model TopicProgress {
+  id               String          @id @default(cuid())
+  userId           String
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicId          String
+  topic            Topic           @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  masteryScore     Int             @default(0) // 0 to 100
+  questionsSolved  Int             @default(0)
+  questionsTotal   Int             @default(0)
+  isUnlocked       Boolean         @default(true)
+  updatedAt        DateTime        @updatedAt
+
+  @@unique([userId, topicId])
+}
+
+model DailyActivity {
+  id               String          @id @default(cuid())
+  userId           String
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date             String          // "YYYY-MM-DD"
+  questionsSolved  Int             @default(0)
+  questionsAttempted Int           @default(0)
+  totalTimeSec     Int             @default(0)
+  accuracy         Float           @default(0.0)
+  createdAt        DateTime        @default(now())
+
+  @@unique([userId, date])
+}
+
+model AIConversation {
+  id               String          @id @default(cuid())
+  userId           String
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId       String
+  question         Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  role             String          // "user" | "assistant" | "system"
+  message          String
+  hintLevel        Int             @default(0)
+  createdAt        DateTime        @default(now())
+}
