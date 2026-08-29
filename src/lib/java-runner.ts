@@ -203,9 +203,12 @@ export async function executeJavaCode(
       exec(`javac "${javaFilePath}"`, { cwd: tempDir, timeout: 6000 }, (error, stdout, stderr) => {
         if (error || (stderr && stderr.includes("error:"))) {
           const rawErr = (stderr || error?.message || "").toString();
+          // Remove absolute temp directory paths but keep Solution.java:line: error: syntax and caret
           const cleanErr = rawErr
-            .replaceAll(tempDir, "")
-            .replaceAll(/([A-Za-z0-9_$]+\.java:\d+:)\s*error:\s*/g, "Line ")
+            .split(tempDir + path.sep).join("")
+            .split(tempDir + "/").join("")
+            .split(tempDir + "\\").join("")
+            .split(tempDir).join("")
             .trim();
           resolve({ ok: false, error: cleanErr || "Compilation failed." });
         } else {
@@ -301,7 +304,10 @@ export async function executeJavaCode(
         allPassed = false;
         status = "RUNTIME_ERROR";
         const cleanRuntimeErr = testExec.stderr
-          .replaceAll(tempDir, "")
+          .split(tempDir + path.sep).join("")
+          .split(tempDir + "/").join("")
+          .split(tempDir + "\\").join("")
+          .split(tempDir).join("")
           .trim();
         firstRuntimeError = cleanRuntimeErr;
         results.push({
