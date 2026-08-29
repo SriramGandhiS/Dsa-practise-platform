@@ -259,6 +259,7 @@ export async function executeJavaInMemory(
     passedTests,
     totalTests: testCases.length,
     executionTimeMs: Math.round(totalExecTime / Math.max(1, results.length)),
+    cleanOutput: results.length > 0 ? results[0].actual : "",
     summaryMessage:
       status === "ACCEPTED"
         ? "All test cases passed! Great job!"

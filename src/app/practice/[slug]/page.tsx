@@ -684,6 +684,20 @@ export default function PracticePage() {
                     </span>
                   </div>
 
+                  {/* 1. Program Raw Output Box (Like real online compilers) */}
+                  <div className="space-y-1.5 font-sans">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                        <Terminal className="h-3.5 w-3.5 text-slate-500" />
+                        <span>Your Program Output</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">stdout</span>
+                    </div>
+                    <pre className="p-3.5 rounded-lg bg-slate-900 text-emerald-400 font-mono text-xs whitespace-pre-wrap overflow-x-auto shadow-2xs border border-slate-800">
+                      {runResult.cleanOutput || runResult.results?.[0]?.actual || "(No output printed)"}
+                    </pre>
+                  </div>
+
                   {/* Solved Accepted Banner */}
                   {runResult.status === "ACCEPTED" && (
                     <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 font-sans flex items-center justify-between shadow-2xs">

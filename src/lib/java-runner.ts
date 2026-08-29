@@ -378,6 +378,7 @@ export async function executeJavaCode(
       passedTests: passedCount,
       totalTests: testCases.length,
       executionTimeMs: avgTime,
+      cleanOutput: results.length > 0 ? results[0].actual : "",
       runtimeError: firstRuntimeError,
       summaryMessage,
     };
