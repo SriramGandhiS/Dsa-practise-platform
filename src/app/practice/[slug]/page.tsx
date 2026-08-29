@@ -245,11 +245,15 @@ export default function PracticePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code,
-          questionId: question.id,
+          questionId: question.id || question.slug,
           timeTakenSec: elapsedSec,
         }),
       });
       const data = await res.json();
+      if (!res.ok && !data.status) {
+        data.status = "RUNTIME_ERROR";
+        data.runtimeError = data.error || data.details || "Execution request failed.";
+      }
       setRunResult(data);
       if (data.status === "ACCEPTED") {
         confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
@@ -260,8 +264,17 @@ export default function PracticePage() {
           window.dispatchEvent(new Event("statsUpdated"));
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setRunResult({
+        success: false,
+        status: "RUNTIME_ERROR",
+        runtimeError: err.message || "Failed to reach execution server.",
+        results: [],
+        passedTests: 0,
+        totalTests: 0,
+        executionTimeMs: 0,
+      });
     } finally {
       setIsRunning(false);
     }
@@ -631,7 +644,7 @@ export default function PracticePage() {
                   </p>
                 </div>
               ) : runResult.compileError ? (
-                <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 space-y-2 font-sans">
+                <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 space-y-2 font-sans">
                   <div className="font-bold flex items-center gap-1.5 text-xs text-red-900">
                     <XCircle className="h-4 w-4 text-red-600" />
                     <span>STATUS: COMPILATION ERROR</span>
@@ -639,8 +652,21 @@ export default function PracticePage() {
                   <p className="text-xs text-red-700">
                     Your code could not be compiled. Check the compiler error diagnostic below:
                   </p>
-                  <pre className="p-3 rounded-xl bg-white border border-red-200 font-mono text-xs text-red-800 whitespace-pre-wrap overflow-x-auto">
+                  <pre className="p-3 rounded-lg bg-white border border-red-200 font-mono text-xs text-red-800 whitespace-pre-wrap overflow-x-auto">
                     {runResult.compileError}
+                  </pre>
+                </div>
+              ) : runResult.runtimeError || runResult.error ? (
+                <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 space-y-2 font-sans">
+                  <div className="font-bold flex items-center gap-1.5 text-xs text-red-900">
+                    <XCircle className="h-4 w-4 text-red-600" />
+                    <span>STATUS: {runResult.status || "RUNTIME ERROR"}</span>
+                  </div>
+                  <p className="text-xs text-red-700">
+                    An error occurred during execution:
+                  </p>
+                  <pre className="p-3 rounded-lg bg-white border border-red-200 font-mono text-xs text-red-800 whitespace-pre-wrap overflow-x-auto">
+                    {runResult.runtimeError || runResult.error}
                   </pre>
                 </div>
               ) : (
@@ -649,12 +675,12 @@ export default function PracticePage() {
                   <div className="flex items-center justify-between pb-2 border-b border-slate-200 font-sans">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-slate-800">
-                        {runResult.passedTests} / {runResult.totalTests} test cases passed
+                        {runResult.passedTests ?? 0} / {runResult.totalTests ?? (runResult.results?.length || 0)} test cases passed
                       </span>
                     </div>
 
                     <span className="text-[11px] text-slate-500 font-mono">
-                      {runResult.executionTimeMs}ms avg
+                      {runResult.executionTimeMs || 0}ms avg
                     </span>
                   </div>
 

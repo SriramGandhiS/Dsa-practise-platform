@@ -3,6 +3,7 @@ import { executeJavaCode, TestCase } from "@/lib/java-runner";
 import { analyzeMistakes } from "@/lib/mistake-analyzer";
 import { updateUserStatsAfterSubmission } from "@/lib/adaptive-engine";
 import { prisma } from "@/lib/prisma";
+import { CURATED_QUESTIONS } from "@/lib/curated-questions";
 
 export const dynamic = "force-dynamic";
 
@@ -35,9 +36,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const question = await prisma.question.findUnique({
-      where: { id: questionId },
-    });
+    let question: any = null;
+    try {
+      question = await prisma.question.findFirst({
+        where: {
+          OR: [{ id: questionId }, { slug: questionId }],
+        },
+      });
+    } catch (dbErr) {
+      console.warn("DB question lookup failed in execute:", dbErr);
+    }
+
+    if (!question) {
+      const staticQ = CURATED_QUESTIONS.find(
+        (q) => q.id === questionId || q.slug === questionId
+      );
+      if (staticQ) {
+        question = staticQ;
+      }
+    }
 
     if (!question) {
       return NextResponse.json(
@@ -47,71 +64,82 @@ export async function POST(req: NextRequest) {
     }
 
     // Always run full test suite (visible + hidden) for 100% accurate judging
-    const visibleTests: TestCase[] = JSON.parse(question.visibleTests || "[]");
-    const hiddenTests: TestCase[] = JSON.parse(question.hiddenTests || "[]");
+    const visibleTests: TestCase[] =
+      typeof question.visibleTests === "string"
+        ? JSON.parse(question.visibleTests || "[]")
+        : question.visibleTests || [];
+    const hiddenTests: TestCase[] =
+      typeof question.hiddenTests === "string"
+        ? JSON.parse(question.hiddenTests || "[]")
+        : question.hiddenTests || [];
     const testSuite = [...visibleTests, ...hiddenTests];
 
     const runResult = await executeJavaCode(code, testSuite, question.slug);
 
     // Analyze mistakes if not ACCEPTED
     let failedInfo: { expected: string; actual: string } | undefined;
-    const firstFailed = runResult.results.find((r) => !r.passed);
+    const firstFailed = runResult.results?.find((r) => !r.passed);
     if (firstFailed) {
       failedInfo = { expected: firstFailed.expected, actual: firstFailed.actual };
     }
 
-    const detectedMistakes = runResult.status === "ACCEPTED"
-      ? []
-      : analyzeMistakes(
-          code,
-          runResult.compileError,
-          runResult.runtimeError,
-          failedInfo
-        );
+    const detectedMistakes =
+      runResult.status === "ACCEPTED"
+        ? []
+        : analyzeMistakes(
+            code,
+            runResult.compileError,
+            runResult.runtimeError,
+            failedInfo
+          );
 
-    // Find default learner profile
-    let user = await prisma.user.findFirst();
-    if (!user) {
-      user = await prisma.user.create({
-        data: { email: "learner@javatrainer.dev", name: "Java Learner" },
-      });
+    // Optional background persistence (safe against serverless SQLite failures)
+    try {
+      let user = await prisma.user.findFirst();
+      if (!user) {
+        user = await prisma.user.create({
+          data: { email: "learner@javatrainer.dev", name: "Java Learner" },
+        });
+      }
+
+      if (question.id) {
+        const attemptCount = await prisma.submission.count({
+          where: { userId: user.id, questionId: question.id },
+        });
+
+        await prisma.submission.create({
+          data: {
+            userId: user.id,
+            questionId: question.id,
+            attemptNumber: attemptCount + 1,
+            code,
+            status: runResult.status,
+            timeTakenSec,
+            executionTimeMs: runResult.executionTimeMs,
+            passedTests: runResult.passedTests,
+            totalTests: runResult.totalTests,
+            compileErrorMsg: runResult.compileError,
+            runtimeErrorMsg: runResult.runtimeError,
+            failedTestInfo: firstFailed ? JSON.stringify(firstFailed) : null,
+            hintsUsedCount,
+            solutionViewed,
+            mistakeTags: JSON.stringify(detectedMistakes.map((m) => m.category)),
+          },
+        });
+
+        await updateUserStatsAfterSubmission({
+          userId: user.id,
+          questionId: question.id,
+          isAccepted: runResult.status === "ACCEPTED",
+          timeTakenSec,
+          hintsUsedCount,
+          solutionViewed,
+          mistakeCategories: detectedMistakes.map((m) => m.category),
+        });
+      }
+    } catch (persistErr) {
+      console.warn("Could not save submission to DB:", persistErr);
     }
-
-    // AUTOMATIC PERSISTENCE: Record every execution in database
-    const attemptCount = await prisma.submission.count({
-      where: { userId: user.id, questionId: question.id },
-    });
-
-    await prisma.submission.create({
-      data: {
-        userId: user.id,
-        questionId: question.id,
-        attemptNumber: attemptCount + 1,
-        code,
-        status: runResult.status,
-        timeTakenSec,
-        executionTimeMs: runResult.executionTimeMs,
-        passedTests: runResult.passedTests,
-        totalTests: runResult.totalTests,
-        compileErrorMsg: runResult.compileError,
-        runtimeErrorMsg: runResult.runtimeError,
-        failedTestInfo: firstFailed ? JSON.stringify(firstFailed) : null,
-        hintsUsedCount,
-        solutionViewed,
-        mistakeTags: JSON.stringify(detectedMistakes.map((m) => m.category)),
-      },
-    });
-
-    // Update analytics, daily progress, topic mastery (increments solved count ONLY when ACCEPTED)
-    await updateUserStatsAfterSubmission({
-      userId: user.id,
-      questionId: question.id,
-      isAccepted: runResult.status === "ACCEPTED",
-      timeTakenSec,
-      hintsUsedCount,
-      solutionViewed,
-      mistakeCategories: detectedMistakes.map((m) => m.category),
-    });
 
     return NextResponse.json({
       ...runResult,
@@ -121,7 +149,16 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("Execute API Error:", error);
     return NextResponse.json(
-      { error: "Execution service failure.", details: error.message },
+      {
+        success: false,
+        status: "RUNTIME_ERROR",
+        runtimeError: error.message || "Execution service failure.",
+        results: [],
+        passedTests: 0,
+        totalTests: 0,
+        executionTimeMs: 0,
+        error: error.message || "Execution service failure.",
+      },
       { status: 500 }
     );
   }
