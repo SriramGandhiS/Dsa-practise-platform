@@ -101,6 +101,15 @@ export const PROBLEM_FAMILIES: ProblemFamily[] = [
 /**
  * Returns the family that contains this question slug, if any.
  */
+export function getFamilyById(id: string): ProblemFamily | null {
+  return PROBLEM_FAMILIES.find((f) => f.id === id) || null;
+}
+
 export function getFamilyForSlug(slug: string): ProblemFamily | null {
   return PROBLEM_FAMILIES.find((f) => f.variations.some((v) => v.slug === slug)) || null;
 }
+
+export function isFamilyLeader(slug: string): ProblemFamily | null {
+  return PROBLEM_FAMILIES.find((f) => f.variations[0]?.slug === slug) || null;
+}
+

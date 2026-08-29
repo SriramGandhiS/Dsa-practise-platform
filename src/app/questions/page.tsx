@@ -144,191 +144,97 @@ export default function QuestionsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
-            {questions.map((q, idx) => (
-              <Link
-                key={q.id}
-                href={`/practice/${q.slug}`}
-                className={`px-5 py-4 rounded-lg border transition-all flex items-center justify-between group ${
-                  q.isSolved
-                    ? "bg-emerald-50/40 border-emerald-200 hover:border-emerald-300 hover:bg-emerald-50/70"
-                    : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 shadow-2xs"
-                }`}
-              >
-                <div className="flex items-center gap-4 min-w-0">
-                  {/* Number Index */}
-                  <span
-                    className={`font-semibold w-7 text-right text-sm shrink-0 ${
-                      q.isSolved ? "text-emerald-700" : "text-slate-400"
-                    }`}
-                  >
-                    {idx + 1}.
-                  </span>
+            {questions.map((q, idx) => {
+              const family = getFamilyForSlug(q.slug);
+              const isLeader = family && family.variations[0]?.slug === q.slug;
+              
+              // If it's a family leader, card displays the Series title and routes to /series/[id]
+              const title = isLeader ? family.name : q.title;
+              const targetHref = isLeader ? `/series/${family.id}` : `/practice/${q.slug}`;
 
-                  {/* Solve Status Icon */}
-                  {q.isSolved ? (
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                  ) : (
-                    <div className="h-4 w-4 rounded-full border border-slate-300 shrink-0 group-hover:border-slate-500 transition-colors" />
-                  )}
-
-                  {/* Title */}
-                  <div className="min-w-0 flex items-center">
-                    <h3
-                      className={`text-[15px] sm:text-base font-semibold truncate transition-colors ${
-                        q.isSolved
-                          ? "text-slate-700 group-hover:text-slate-900"
-                          : "text-slate-900 group-hover:text-slate-700"
+              return (
+                <Link
+                  key={q.id}
+                  href={targetHref}
+                  className={`px-5 py-4 rounded-lg border transition-all flex items-center justify-between group ${
+                    q.isSolved
+                      ? "bg-emerald-50/40 border-emerald-200 hover:border-emerald-300 hover:bg-emerald-50/70"
+                      : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 shadow-2xs"
+                  }`}
+                >
+                  <div className="flex items-center gap-4 min-w-0">
+                    {/* Number Index */}
+                    <span
+                      className={`font-semibold w-7 text-right text-sm shrink-0 ${
+                        q.isSolved ? "text-emerald-700" : "text-slate-400"
                       }`}
                     >
-                      {q.title}
-                    </h3>
+                      {idx + 1}.
+                    </span>
+
+                    {/* Solve Status Icon */}
+                    {q.isSolved ? (
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    ) : (
+                      <div className="h-4 w-4 rounded-full border border-slate-300 shrink-0 group-hover:border-slate-500 transition-colors" />
+                    )}
+
+                    {/* Title */}
+                    <div className="min-w-0 flex items-center">
+                      <h3
+                        className={`text-[15px] sm:text-base font-semibold truncate transition-colors ${
+                          q.isSolved
+                            ? "text-slate-700 group-hover:text-slate-900"
+                            : "text-slate-900 group-hover:text-slate-700"
+                        }`}
+                      >
+                        {title}
+                      </h3>
+                    </div>
                   </div>
-                </div>
 
-                {/* Right Badges & Arrow */}
-                <div className="flex items-center gap-2.5 shrink-0 ml-4">
-                  {(() => {
-                    const family = getFamilyForSlug(q.slug);
-                    if (!family) return null;
-                    const isOpen = openFamilySlug === q.slug;
-                    return (
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setOpenFamilySlug(isOpen ? null : q.slug);
-                          }}
-                          className={`hidden md:inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded border transition-colors shadow-2xs ${
-                            isOpen
-                              ? "bg-slate-900 text-white border-slate-900"
-                              : "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200 hover:text-slate-900"
-                          }`}
-                          title={`View all ${family.variations.length} variations in ${family.name}`}
-                        >
-                          <span>{family.name}</span>
-                          <span
-                            className={`text-[10px] px-1 rounded-full font-bold ${
-                              isOpen
-                                ? "bg-slate-800 text-slate-200"
-                                : "bg-white text-slate-600 border border-slate-200"
-                            }`}
-                          >
-                            {family.variations.length}
-                          </span>
-                          <ChevronDown
-                            className={`h-3 w-3 transition-transform ${
-                              isOpen ? "rotate-180 text-white" : "text-slate-500"
-                            }`}
-                          />
-                        </button>
+                  {/* Right Badges & Arrow */}
+                  <div className="flex items-center gap-2.5 shrink-0 ml-4">
+                    {isLeader && (
+                      <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+                        {family.variations.length} Options
+                      </span>
+                    )}
 
-                        {/* Dropdown Menu for Series Variations */}
-                        {isOpen && (
-                          <div
-                            onClick={(e) => e.stopPropagation()}
-                            className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white border border-slate-300 rounded-lg shadow-xl p-3 z-30 space-y-2.5 text-left font-sans text-xs"
-                          >
-                            <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
-                              <div>
-                                <span className="font-bold text-slate-900 text-xs">
-                                  {family.name}
-                                </span>
-                                <p className="text-[11px] text-slate-500">
-                                  {family.description}
-                                </p>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setOpenFamilySlug(null);
-                                }}
-                                className="text-slate-400 hover:text-slate-700 p-0.5"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
+                    {q.topicSlug === "java-basics" && (
+                      <span className="hidden sm:inline-block text-[11px] font-medium px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200/80">
+                        Most Interviewed
+                      </span>
+                    )}
 
-                            <div className="space-y-1">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                Choose variation to solve:
-                              </span>
-                              <div className="space-y-1 pt-0.5">
-                                {family.variations.map((v) => {
-                                  const isCurrent = v.slug === q.slug;
-                                  return (
-                                    <Link
-                                      key={v.slug}
-                                      href={`/practice/${v.slug}`}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setOpenFamilySlug(null);
-                                      }}
-                                      className={`flex items-center justify-between p-2 rounded-md transition-colors ${
-                                        isCurrent
-                                          ? "bg-slate-100 font-semibold text-slate-900 border border-slate-200"
-                                          : "hover:bg-slate-50 text-slate-700 hover:text-slate-900"
-                                      }`}
-                                    >
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
-                                          {v.dataType}
-                                        </span>
-                                        <span>{v.title}</span>
-                                        {isCurrent && (
-                                          <span className="text-[10px] text-slate-400 font-normal">
-                                            (this)
-                                          </span>
-                                        )}
-                                      </div>
-                                      <span className="text-xs font-bold text-slate-900">
-                                        Solve &rarr;
-                                      </span>
-                                    </Link>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
+                    {q.isSolved ? (
+                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        Solved
+                      </span>
+                    ) : (
+                      <span
+                        className="text-xs font-medium px-2.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200"
+                      >
+                        {q.difficulty === "BEGINNER" ? "Beginner" : "Easy"}
+                      </span>
+                    )}
 
-                  {q.topicSlug === "java-basics" && (
-                    <span className="hidden sm:inline-block text-[11px] font-medium px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200/80">
-                      Most Interviewed
-                    </span>
-                  )}
-
-                  {q.isSolved ? (
-                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
-                      Solved
-                    </span>
-                  ) : (
-                    <span
-                      className="text-xs font-medium px-2.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200"
-                    >
-                      {q.difficulty === "BEGINNER" ? "Beginner" : "Easy"}
-                    </span>
-                  )}
-
-                  <ArrowRight
-                    className={`h-4 w-4 transition-transform group-hover:translate-x-0.5 ${
-                      q.isSolved
-                        ? "text-emerald-600"
-                        : "text-slate-300 group-hover:text-slate-600"
-                    }`}
-                  />
-                </div>
-              </Link>
-            ))}
+                    <ArrowRight
+                      className={`h-4 w-4 transition-transform group-hover:translate-x-0.5 ${
+                        q.isSolved
+                          ? "text-emerald-600"
+                          : "text-slate-300 group-hover:text-slate-600"
+                      }`}
+                    />
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>
     </div>
   );
 }
+
 

@@ -531,41 +531,6 @@ export default function PracticePage() {
           {/* TAB 1: REFINED HIGH-READABILITY DOCUMENT-STYLE QUESTION & SAMPLES */}
           {activeTab === "problem" && (
             <div className="flex-1 p-6 sm:p-8 overflow-y-auto space-y-6 select-text font-sans">
-              {/* Related Problem Variations / Series */}
-              {(() => {
-                const family = getFamilyForSlug(question.slug);
-                if (!family || family.variations.length <= 1) return null;
-                return (
-                  <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs font-sans">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900">{family.name}:</span>
-                      <span className="text-slate-500 text-[11px] hidden md:inline">{family.description}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {family.variations.map((v) => {
-                        const isCurrent = v.slug === question.slug;
-                        return isCurrent ? (
-                          <span
-                            key={v.slug}
-                            className="px-2.5 py-1 rounded text-xs font-semibold bg-slate-900 text-white shadow-2xs"
-                          >
-                            {v.title} ({v.dataType})
-                          </span>
-                        ) : (
-                          <Link
-                            key={v.slug}
-                            href={`/practice/${v.slug}`}
-                            className="px-2.5 py-1 rounded text-xs font-medium bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-                          >
-                            {v.title} ({v.dataType})
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })()}
-
               {/* 1. Problem Description (17-18px readable text) */}
               <div className="space-y-2">
                 <p className="text-[17px] sm:text-[18px] text-slate-900 leading-relaxed font-medium">
