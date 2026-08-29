@@ -1,9 +1,8 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, CheckCircle2, ArrowRight } from "lucide-react";
-import { getFamilyForSlug } from "@/lib/problem-families";
+import { Search, CheckCircle2, ArrowRight, ChevronDown, X } from "lucide-react";
+import { getFamilyForSlug, PROBLEM_FAMILIES } from "@/lib/problem-families";
 
 interface QuestionItem {
   id: string;
@@ -25,6 +24,13 @@ export default function QuestionsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTopic, setSelectedTopic] = useState("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState("all");
+  const [openFamilySlug, setOpenFamilySlug] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleDocumentClick = () => setOpenFamilySlug(null);
+    window.addEventListener("click", handleDocumentClick);
+    return () => window.removeEventListener("click", handleDocumentClick);
+  }, []);
 
   const fetchQuestions = () => {
     setLoading(true);
@@ -184,10 +190,110 @@ export default function QuestionsPage() {
                   {(() => {
                     const family = getFamilyForSlug(q.slug);
                     if (!family) return null;
+                    const isOpen = openFamilySlug === q.slug;
                     return (
-                      <span className="hidden md:inline-block text-[11px] font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
-                        {family.name}
-                      </span>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setOpenFamilySlug(isOpen ? null : q.slug);
+                          }}
+                          className={`hidden md:inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded border transition-colors shadow-2xs ${
+                            isOpen
+                              ? "bg-slate-900 text-white border-slate-900"
+                              : "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200 hover:text-slate-900"
+                          }`}
+                          title={`View all ${family.variations.length} variations in ${family.name}`}
+                        >
+                          <span>{family.name}</span>
+                          <span
+                            className={`text-[10px] px-1 rounded-full font-bold ${
+                              isOpen
+                                ? "bg-slate-800 text-slate-200"
+                                : "bg-white text-slate-600 border border-slate-200"
+                            }`}
+                          >
+                            {family.variations.length}
+                          </span>
+                          <ChevronDown
+                            className={`h-3 w-3 transition-transform ${
+                              isOpen ? "rotate-180 text-white" : "text-slate-500"
+                            }`}
+                          />
+                        </button>
+
+                        {/* Dropdown Menu for Series Variations */}
+                        {isOpen && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white border border-slate-300 rounded-lg shadow-xl p-3 z-30 space-y-2.5 text-left font-sans text-xs"
+                          >
+                            <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
+                              <div>
+                                <span className="font-bold text-slate-900 text-xs">
+                                  {family.name}
+                                </span>
+                                <p className="text-[11px] text-slate-500">
+                                  {family.description}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenFamilySlug(null);
+                                }}
+                                className="text-slate-400 hover:text-slate-700 p-0.5"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                Choose variation to solve:
+                              </span>
+                              <div className="space-y-1 pt-0.5">
+                                {family.variations.map((v) => {
+                                  const isCurrent = v.slug === q.slug;
+                                  return (
+                                    <Link
+                                      key={v.slug}
+                                      href={`/practice/${v.slug}`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenFamilySlug(null);
+                                      }}
+                                      className={`flex items-center justify-between p-2 rounded-md transition-colors ${
+                                        isCurrent
+                                          ? "bg-slate-100 font-semibold text-slate-900 border border-slate-200"
+                                          : "hover:bg-slate-50 text-slate-700 hover:text-slate-900"
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
+                                          {v.dataType}
+                                        </span>
+                                        <span>{v.title}</span>
+                                        {isCurrent && (
+                                          <span className="text-[10px] text-slate-400 font-normal">
+                                            (this)
+                                          </span>
+                                        )}
+                                      </div>
+                                      <span className="text-xs font-bold text-slate-900">
+                                        Solve &rarr;
+                                      </span>
+                                    </Link>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     );
                   })()}
 
