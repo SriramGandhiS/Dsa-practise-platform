@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Search, CheckCircle2, ArrowRight } from "lucide-react";
+import { getFamilyForSlug } from "@/lib/problem-families";
 
 interface QuestionItem {
   id: string;
@@ -180,6 +181,16 @@ export default function QuestionsPage() {
 
                 {/* Right Badges & Arrow */}
                 <div className="flex items-center gap-2.5 shrink-0 ml-4">
+                  {(() => {
+                    const family = getFamilyForSlug(q.slug);
+                    if (!family) return null;
+                    return (
+                      <span className="hidden md:inline-block text-[11px] font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                        {family.name}
+                      </span>
+                    );
+                  })()}
+
                   {q.topicSlug === "java-basics" && (
                     <span className="hidden sm:inline-block text-[11px] font-medium px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200/80">
                       Most Interviewed
