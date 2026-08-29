@@ -925,22 +925,65 @@ export default function PracticePage() {
                       </div>
                     )}
 
-                    {/* 3. Number Digit Extraction Flow */}
-                    {diag.diagramType === "digit_flow" && diag.digitData && (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        {diag.digitData.steps.map((s, i) => (
-                          <div key={i} className="p-3 rounded-xl bg-blue-50/40 border border-blue-100 text-xs space-y-1">
-                            <span className="text-[10px] font-bold text-blue-700 uppercase block font-sans">
-                              {s.step}
-                            </span>
-                            <code className="text-slate-900 font-mono font-bold text-xs block">
-                              {s.op}
-                            </code>
-                            <span className="text-[11px] text-slate-600 font-sans block">
-                              {s.result}
+                    {/* 3. Number Digit Extraction Visual Graphic */}
+                    {diag.diagramType === "digit_flow" && (
+                      <div className="p-4 rounded-xl bg-blue-50/30 border border-blue-100 flex flex-col items-center justify-center space-y-4">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+                          Digit Extraction & Shift Process:
+                        </div>
+
+                        {/* Visual Boxes & Flow Arrows */}
+                        <div className="flex flex-wrap items-center justify-center gap-4 py-1">
+                          {/* 1. Extract Digit Box */}
+                          <div className="flex flex-col items-center">
+                            <span className="text-[10px] font-mono text-slate-400 mb-1">Current Number n</span>
+                            <div className="flex border-2 border-blue-600 rounded-md bg-blue-50/80 overflow-hidden shadow-2xs">
+                              <div className="w-9 h-9 flex items-center justify-center font-mono text-sm font-bold text-slate-800 border-r-2 border-blue-600 bg-blue-50/80">
+                                1
+                              </div>
+                              <div className="w-9 h-9 flex items-center justify-center font-mono text-sm font-bold text-slate-800 border-r-2 border-blue-600 bg-blue-50/80">
+                                2
+                              </div>
+                              <div className="w-9 h-9 flex items-center justify-center font-mono text-sm font-bold text-amber-700 bg-amber-100/70">
+                                1
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-mono font-bold text-amber-600 mt-1">
+                              n % 10 = 1 (extract)
                             </span>
                           </div>
-                        ))}
+
+                          <span className="text-lg font-bold text-blue-500 hidden sm:inline">➔</span>
+
+                          {/* 2. Shift & Accumulate Box */}
+                          <div className="flex flex-col items-center">
+                            <span className="text-[10px] font-mono text-slate-400 mb-1">Reversed Accumulator</span>
+                            <div className="px-3 h-9 flex items-center justify-center font-mono text-xs font-bold text-emerald-800 bg-emerald-50 border-2 border-emerald-500 rounded-md shadow-2xs">
+                              rev * 10 + d
+                            </div>
+                            <span className="text-[10px] font-mono font-bold text-emerald-600 mt-1">
+                              0 ➔ 1 ➔ 12 ➔ 121
+                            </span>
+                          </div>
+
+                          <span className="text-lg font-bold text-blue-500 hidden sm:inline">➔</span>
+
+                          {/* 3. Reduce Number Box */}
+                          <div className="flex flex-col items-center">
+                            <span className="text-[10px] font-mono text-slate-400 mb-1">Reduce for Next Loop</span>
+                            <div className="px-3 h-9 flex items-center justify-center font-mono text-xs font-bold text-blue-800 bg-blue-50 border-2 border-blue-400 rounded-md shadow-2xs">
+                              n = n / 10
+                            </div>
+                            <span className="text-[10px] font-mono font-bold text-blue-600 mt-1">
+                              121 ➔ 12 ➔ 1 ➔ 0
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Core Loop Code Pill */}
+                        <code className="text-xs font-mono font-bold text-blue-800 bg-blue-50/80 px-3 py-1 rounded-full border border-blue-200">
+                          while (n &gt; 0) &#123; d = n % 10; rev = rev * 10 + d; n /= 10; &#125;
+                        </code>
                       </div>
                     )}
 
