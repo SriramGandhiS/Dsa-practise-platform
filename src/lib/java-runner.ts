@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import crypto from "crypto";
+import { executeJavaInMemory } from "./java-engine";
 
 export interface TestCase {
   id: number | string;
@@ -218,6 +219,18 @@ export async function executeJavaCode(
     });
 
     if (!compileResult.ok) {
+      // If javac is not installed (e.g. Netlify serverless Lambda / Linux container without JDK),
+      // seamlessly fall back to pure in-engine Java runner!
+      const errStr = (compileResult.error || "").toLowerCase();
+      if (
+        errStr.includes("command not found") ||
+        errStr.includes("not recognized") ||
+        errStr.includes("enoent") ||
+        errStr.includes("cannot find")
+      ) {
+        return executeJavaInMemory(userCode, testCases);
+      }
+
       return {
         success: false,
         status: "COMPILE_ERROR",
