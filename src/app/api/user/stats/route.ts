@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { evaluateLevelUpReadiness } from "@/lib/adaptive-engine";
+import { CURATED_QUESTIONS, TOPIC_MAP } from "@/lib/curated-questions";
 
 export const dynamic = "force-dynamic";
 
@@ -66,10 +67,22 @@ export async function GET() {
     });
     const solvedIds = new Set(solvedSubmissions.map((s) => s.questionId));
 
-    const allQuestions = await prisma.question.findMany({
-      orderBy: [{ level: "asc" }, { orderIndex: "asc" }],
-      include: { topic: true },
-    });
+    let allQuestions: any[] = [];
+    try {
+      allQuestions = await prisma.question.findMany({
+        orderBy: [{ level: "asc" }, { orderIndex: "asc" }],
+        include: { topic: true },
+      });
+    } catch (dbErr) {
+      console.warn("DB query for stats questions failed:", dbErr);
+    }
+
+    if (!allQuestions || allQuestions.length === 0) {
+      allQuestions = CURATED_QUESTIONS.map((q) => ({
+        ...q,
+        topic: TOPIC_MAP.get(q.topicId) || { name: "General", slug: "general" },
+      }));
+    }
 
     const recommendedQuestions = allQuestions
       .filter((q) => !solvedIds.has(q.id))

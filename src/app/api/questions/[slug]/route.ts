@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCuratedQuestionBySlug } from "@/lib/curated-questions";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(
   req: NextRequest,
@@ -7,16 +10,32 @@ export async function GET(
 ) {
   try {
     const slug = params.slug;
-    const question = await prisma.question.findUnique({
-      where: { slug },
-      include: {
-        topic: true,
-        submissions: {
-          orderBy: { createdAt: "desc" },
-          take: 10,
+    let question: any = null;
+
+    try {
+      question = await prisma.question.findUnique({
+        where: { slug },
+        include: {
+          topic: true,
+          submissions: {
+            orderBy: { createdAt: "desc" },
+            take: 10,
+          },
         },
-      },
-    });
+      });
+    } catch (dbErr) {
+      console.warn("DB query for slug failed, falling back to static:", dbErr);
+    }
+
+    if (!question) {
+      const staticQ = getCuratedQuestionBySlug(slug);
+      if (staticQ) {
+        question = {
+          ...staticQ,
+          submissions: [],
+        };
+      }
+    }
 
     if (!question) {
       return NextResponse.json(
@@ -34,3 +53,4 @@ export async function GET(
     );
   }
 }
+
