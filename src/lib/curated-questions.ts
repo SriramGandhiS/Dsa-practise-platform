@@ -34,6 +34,14 @@ export interface CuratedQuestion {
   commonMistakes?: string;
 }
 
+export const UNIVERSAL_STARTER_CODE = `import java.util.*;
+
+public class Solution {
+    public static void main(String[] args) {
+        // Write your code here
+    }
+}`;
+
 export const CURATED_TOPICS: CuratedTopic[] = [
   {
     id: "java-basics",
