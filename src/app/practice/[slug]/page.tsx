@@ -839,67 +839,85 @@ export default function PracticePage() {
                 const diag = question ? getDiagramForSlug(question.slug) : null;
                 if (!diag) return null;
                 return (
-                  <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-3 font-sans">
+                  <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4 font-sans">
+                    {/* Header */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-900">
-                          📌 Visual Concept: {diag.title}
+                        <span className="text-xs font-black uppercase tracking-wider text-blue-700">
+                          📐 Visual Concept: {diag.title}
                         </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                           {diag.category}
                         </span>
                       </div>
                     </div>
 
-                    {/* 1. Array / Two-Pointer Visual Graphic */}
-                    {(diag.diagram.type === "array_boxes" || diag.diagram.type === "two_pointer") && diag.diagram.boxes && (
-                      <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80">
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 font-mono">
-                          1D Array Index & Pointers:
-                        </div>
-                        <div className="flex items-center justify-center gap-2 py-1 overflow-x-auto">
-                          {diag.diagram.boxes.map((b, i) => (
-                            <div key={i} className="flex flex-col items-center gap-1 min-w-[48px]">
-                              <span className="text-[10px] font-mono text-slate-400">
-                                idx: {b.index}
-                              </span>
-                              <div
-                                className={`w-10 h-10 flex items-center justify-center rounded-lg font-mono text-xs font-bold border ${
-                                  b.highlight
-                                    ? "bg-emerald-50 border-emerald-400 text-emerald-900 shadow-2xs"
-                                    : "bg-white border-slate-200 text-slate-800"
-                                }`}
-                              >
-                                {b.value}
-                              </div>
-                              {b.label && (
-                                <span className="text-[9px] font-mono text-emerald-700 font-bold text-center">
-                                  {b.label}
-                                </span>
-                              )}
+                    {/* 1. Contiguous 1D Array Graphic (Scaler / TalentBattle style) */}
+                    {(diag.diagramType === "array_traversal" || diag.diagramType === "array_two_pointer") && diag.arrayData && (
+                      <div className="p-4 rounded-xl bg-blue-50/30 border border-blue-100 flex flex-col items-center justify-center space-y-3">
+                        {/* Pointers Top (if any) */}
+                        {diag.arrayData.pointers && (
+                          <div className="flex items-center justify-between w-full max-w-sm px-2 text-xs font-mono font-bold text-blue-600">
+                            <span>{diag.arrayData.pointers.leftLabel}</span>
+                            <span>{diag.arrayData.pointers.rightLabel}</span>
+                          </div>
+                        )}
+
+                        {/* Contiguous Array Box */}
+                        <div className="flex border-2 border-blue-600 rounded-md bg-blue-50/60 overflow-hidden shadow-xs">
+                          {diag.arrayData.elements.map((el, i) => (
+                            <div
+                              key={i}
+                              className="w-12 h-12 flex items-center justify-center font-mono text-base font-bold text-slate-800 border-r-2 border-blue-600 last:border-r-0 bg-blue-50/80"
+                            >
+                              {el}
                             </div>
                           ))}
                         </div>
+
+                        {/* Indices directly below boxes */}
+                        <div className="flex justify-center">
+                          {diag.arrayData.indices.map((idx, i) => (
+                            <div
+                              key={i}
+                              className="w-12 text-center font-mono text-xs font-bold text-amber-600"
+                            >
+                              {idx}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Traversal / Loop Definition */}
+                        {diag.arrayData.loopCode && (
+                          <div className="pt-1 flex flex-col items-center">
+                            <span className="text-amber-600 text-lg leading-none select-none">
+                              ⤷──────⤷──────⤷──────⤷
+                            </span>
+                            <code className="text-xs font-mono font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 mt-1">
+                              {diag.arrayData.loopCode}
+                            </code>
+                          </div>
+                        )}
                       </div>
                     )}
 
                     {/* 2. Star Pattern Outer/Inner Loops Graphic */}
-                    {diag.diagram.type === "pattern_loops" && diag.diagram.patternSteps && (
-                      <div className="overflow-x-auto rounded-lg border border-slate-200 text-xs">
+                    {diag.diagramType === "star_pattern" && diag.patternData && (
+                      <div className="overflow-x-auto rounded-xl border border-slate-200 text-xs">
                         <table className="w-full text-left font-mono">
                           <thead className="bg-slate-100/80 text-slate-700 text-[10px] uppercase font-bold border-b border-slate-200">
                             <tr>
-                              <th className="p-2">Row (Outer Loop i)</th>
-                              <th className="p-2">Inner Loop 1 (Spaces)</th>
-                              <th className="p-2">Inner Loop 2 (Stars)</th>
+                              <th className="p-2.5">Row (Outer Loop i)</th>
+                              <th className="p-2.5">Inner Loop 1 (Spaces)</th>
+                              <th className="p-2.5">Inner Loop 2 (Stars)</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 text-[11px] text-slate-800">
-                            {diag.diagram.patternSteps.map((p, i) => (
+                            {diag.patternData.steps.map((p, i) => (
                               <tr key={i} className="hover:bg-slate-50">
-                                <td className="p-2 font-bold text-slate-900">{p.row}</td>
-                                <td className="p-2 text-slate-600">{p.spaces}</td>
-                                <td className="p-2 text-emerald-700 font-bold">{p.stars}</td>
+                                <td className="p-2.5 font-bold text-slate-900">{p.row}</td>
+                                <td className="p-2.5 text-slate-600">{p.spaces}</td>
+                                <td className="p-2.5 text-emerald-700 font-bold">{p.stars}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -908,30 +926,33 @@ export default function PracticePage() {
                     )}
 
                     {/* 3. Number Digit Extraction Flow */}
-                    {diag.diagram.type === "digit_flow" && diag.diagram.flowSteps && (
+                    {diag.diagramType === "digit_flow" && diag.digitData && (
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        {diag.diagram.flowSteps.map((f, i) => (
-                          <div key={i} className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs space-y-1">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase block font-sans">
-                              {f.action}
+                        {diag.digitData.steps.map((s, i) => (
+                          <div key={i} className="p-3 rounded-xl bg-blue-50/40 border border-blue-100 text-xs space-y-1">
+                            <span className="text-[10px] font-bold text-blue-700 uppercase block font-sans">
+                              {s.step}
                             </span>
-                            <code className="text-emerald-700 font-mono font-bold text-xs block">
-                              {f.formula}
+                            <code className="text-slate-900 font-mono font-bold text-xs block">
+                              {s.op}
                             </code>
                             <span className="text-[11px] text-slate-600 font-sans block">
-                              {f.result}
+                              {s.result}
                             </span>
                           </div>
                         ))}
                       </div>
                     )}
 
-                    {/* Short 2-3 bullet explanation */}
-                    <div className="space-y-1 pt-1 border-t border-slate-100 text-xs text-slate-700">
-                      {diag.explanation.map((exp, i) => (
-                        <div key={i} className="flex items-start gap-1.5 leading-relaxed">
-                          <span className="text-emerald-600 font-bold">✓</span>
-                          <span>{exp}</span>
+                    {/* Short 3-bullet explanation */}
+                    <div className="space-y-1.5 pt-2 border-t border-slate-100 text-xs text-slate-700 font-sans">
+                      <span className="text-[11px] font-bold text-slate-900 block">
+                        Key Concept:
+                      </span>
+                      {diag.bullets.map((b, i) => (
+                        <div key={i} className="flex items-start gap-2 leading-relaxed">
+                          <span className="text-blue-600 font-bold">•</span>
+                          <span>{b}</span>
                         </div>
                       ))}
                     </div>
