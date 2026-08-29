@@ -20,6 +20,8 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { analyzeJavaCodeLive, EditorMarker } from "@/lib/java-diagnostics";
 import { getFamilyForSlug } from "@/lib/problem-families";
@@ -83,6 +85,28 @@ export default function PracticePage() {
 
   // Hint State
   const [showHint, setShowHint] = useState(false);
+
+  // Editor Font Zoom State (Default 16px for comfortable desktop readability)
+  const [editorFontSize, setEditorFontSize] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("preferred_editor_font_size");
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= 12 && parsed <= 30) return parsed;
+      }
+    }
+    return 16;
+  });
+
+  const handleFontSizeChange = (delta: number) => {
+    setEditorFontSize((prev) => {
+      const next = Math.min(28, Math.max(12, prev + delta));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("preferred_editor_font_size", next.toString());
+      }
+      return next;
+    });
+  };
 
   // Dragging logic
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -388,6 +412,27 @@ export default function PracticePage() {
             )}
           </button>
 
+          {/* Zoom In / Zoom Out Font Size Controls */}
+          <div className="flex items-center gap-0.5 px-2 py-0.5 rounded-full border border-slate-200 bg-white shadow-2xs">
+            <button
+              onClick={() => handleFontSizeChange(-1)}
+              className="p-1 rounded-full text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+              title="Zoom Out (Smaller Code Font)"
+            >
+              <ZoomOut className="h-3.5 w-3.5" />
+            </button>
+            <span className="text-[11px] font-mono font-bold text-slate-700 w-9 text-center select-none">
+              {editorFontSize}px
+            </span>
+            <button
+              onClick={() => handleFontSizeChange(1)}
+              className="p-1 rounded-full text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+              title="Zoom In (Larger Code Font)"
+            >
+              <ZoomIn className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
           {/* Reset Starter Code */}
           <button
             onClick={() => setCode(question.starterCode)}
@@ -422,7 +467,8 @@ export default function PracticePage() {
               onChange={(v) => setCode(v || "")}
               onMount={handleEditorDidMount}
               options={{
-                fontSize: 14,
+                fontSize: editorFontSize,
+                lineHeight: Math.round(editorFontSize * 1.55),
                 fontFamily: "Consolas, 'Courier New', monospace",
                 minimap: { enabled: false },
                 scrollBeyondLastLine: false,
