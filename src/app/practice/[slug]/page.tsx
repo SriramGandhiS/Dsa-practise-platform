@@ -834,53 +834,47 @@ export default function PracticePage() {
                 <strong className="text-slate-800">Note:</strong> The solution below is an educational reference with visual execution diagrams. Any valid Java approach that produces the correct output is accepted.
               </div>
 
-              {/* VISUAL DIAGRAM & STEP-BY-STEP EXECUTION TRACE */}
+              {/* VISUAL DIAGRAM & QUICK EXPLANATION */}
               {(() => {
-                const diagram = question ? getDiagramForSlug(question.slug) : null;
-                if (!diagram) return null;
+                const diag = question ? getDiagramForSlug(question.slug) : null;
+                if (!diag) return null;
                 return (
-                  <div className="p-5 rounded-2xl bg-slate-900 text-white space-y-4 border border-slate-800 shadow-sm">
-                    {/* Header */}
+                  <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-3 font-sans">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
-                          📐 Visual Execution Diagram
+                        <span className="text-xs font-bold text-slate-900">
+                          📌 Visual Concept: {diag.title}
                         </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono">
-                          {diagram.type}
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                          {diag.category}
                         </span>
                       </div>
-                      <span className="text-xs font-bold text-slate-200">{diagram.title}</span>
                     </div>
 
-                    <p className="text-xs text-slate-300 leading-relaxed">
-                      {diagram.description}
-                    </p>
-
-                    {/* Array / Pointer Graphic (if available) */}
-                    {diagram.arrayElements && (
-                      <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block font-mono">
-                          1D Memory Representation:
-                        </span>
-                        <div className="flex items-center justify-center gap-2 py-2 overflow-x-auto">
-                          {diagram.arrayElements.map((el, i) => (
-                            <div key={i} className="flex flex-col items-center gap-1 min-w-[52px]">
+                    {/* 1. Array / Two-Pointer Visual Graphic */}
+                    {(diag.diagram.type === "array_boxes" || diag.diagram.type === "two_pointer") && diag.diagram.boxes && (
+                      <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 font-mono">
+                          1D Array Index & Pointers:
+                        </div>
+                        <div className="flex items-center justify-center gap-2 py-1 overflow-x-auto">
+                          {diag.diagram.boxes.map((b, i) => (
+                            <div key={i} className="flex flex-col items-center gap-1 min-w-[48px]">
                               <span className="text-[10px] font-mono text-slate-400">
-                                [{el.index}]
+                                idx: {b.index}
                               </span>
                               <div
-                                className={`w-12 h-12 flex items-center justify-center rounded-xl font-mono text-sm font-bold border transition-all ${
-                                  el.highlight
-                                    ? "bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-sm"
-                                    : "bg-slate-800/80 border-slate-700 text-white"
+                                className={`w-10 h-10 flex items-center justify-center rounded-lg font-mono text-xs font-bold border ${
+                                  b.highlight
+                                    ? "bg-emerald-50 border-emerald-400 text-emerald-900 shadow-2xs"
+                                    : "bg-white border-slate-200 text-slate-800"
                                 }`}
                               >
-                                {el.value}
+                                {b.value}
                               </div>
-                              {el.label && (
-                                <span className="text-[9px] font-mono text-emerald-400 text-center font-semibold">
-                                  {el.label}
+                              {b.label && (
+                                <span className="text-[9px] font-mono text-emerald-700 font-bold text-center">
+                                  {b.label}
                                 </span>
                               )}
                             </div>
@@ -889,62 +883,58 @@ export default function PracticePage() {
                       </div>
                     )}
 
-                    {/* Step-by-Step State Trace Table */}
-                    {diagram.headers && diagram.rows && (
-                      <div className="space-y-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block font-mono">
-                          Step-by-Step Variable Trace:
-                        </span>
-                        <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
-                          <table className="w-full text-left text-xs border-collapse font-mono">
-                            <thead>
-                              <tr className="bg-slate-800/80 text-slate-300 border-b border-slate-700 text-[11px]">
-                                {diagram.headers.map((h, i) => (
-                                  <th key={i} className="p-2.5 font-bold">
-                                    {h}
-                                  </th>
-                                ))}
+                    {/* 2. Star Pattern Outer/Inner Loops Graphic */}
+                    {diag.diagram.type === "pattern_loops" && diag.diagram.patternSteps && (
+                      <div className="overflow-x-auto rounded-lg border border-slate-200 text-xs">
+                        <table className="w-full text-left font-mono">
+                          <thead className="bg-slate-100/80 text-slate-700 text-[10px] uppercase font-bold border-b border-slate-200">
+                            <tr>
+                              <th className="p-2">Row (Outer Loop i)</th>
+                              <th className="p-2">Inner Loop 1 (Spaces)</th>
+                              <th className="p-2">Inner Loop 2 (Stars)</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 text-[11px] text-slate-800">
+                            {diag.diagram.patternSteps.map((p, i) => (
+                              <tr key={i} className="hover:bg-slate-50">
+                                <td className="p-2 font-bold text-slate-900">{p.row}</td>
+                                <td className="p-2 text-slate-600">{p.spaces}</td>
+                                <td className="p-2 text-emerald-700 font-bold">{p.stars}</td>
                               </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-800/80 text-[11px] text-slate-300">
-                              {diagram.rows.map((r, ri) => (
-                                <tr key={ri} className="hover:bg-slate-900/50 transition-colors">
-                                  {r.map((c, ci) => (
-                                    <td key={ci} className="p-2.5">
-                                      {c}
-                                    </td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     )}
 
-                    {/* Code Mapping Breakdown */}
-                    {diagram.codeMapping && (
-                      <div className="space-y-2 pt-2 border-t border-slate-800">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block font-mono">
-                          Logic Breakdown:
-                        </span>
-                        <div className="grid grid-cols-1 gap-2 text-xs">
-                          {diagram.codeMapping.map((cm, i) => (
-                            <div
-                              key={i}
-                              className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex flex-col md:flex-row md:items-center gap-2 justify-between"
-                            >
-                              <code className="text-emerald-300 font-mono font-bold text-[11px]">
-                                {cm.line}
-                              </code>
-                              <span className="text-slate-400 text-xs font-sans">
-                                {cm.explanation}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
+                    {/* 3. Number Digit Extraction Flow */}
+                    {diag.diagram.type === "digit_flow" && diag.diagram.flowSteps && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {diag.diagram.flowSteps.map((f, i) => (
+                          <div key={i} className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs space-y-1">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase block font-sans">
+                              {f.action}
+                            </span>
+                            <code className="text-emerald-700 font-mono font-bold text-xs block">
+                              {f.formula}
+                            </code>
+                            <span className="text-[11px] text-slate-600 font-sans block">
+                              {f.result}
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     )}
+
+                    {/* Short 2-3 bullet explanation */}
+                    <div className="space-y-1 pt-1 border-t border-slate-100 text-xs text-slate-700">
+                      {diag.explanation.map((exp, i) => (
+                        <div key={i} className="flex items-start gap-1.5 leading-relaxed">
+                          <span className="text-emerald-600 font-bold">✓</span>
+                          <span>{exp}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 );
               })()}
