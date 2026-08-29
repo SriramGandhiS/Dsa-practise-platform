@@ -48,9 +48,11 @@ export function transpileJavaToJS(javaCode: string): { jsCode: string; error?: s
   try {
     let code = javaCode;
 
-    // 1. Remove comments
+    // 1. Remove comments and imports / packages
     code = code.replace(/\/\*[\s\S]*?\*\//g, "");
     code = code.replace(/\/\/.*$/gm, "");
+    code = code.replace(/import\s+[^;]+;/g, "");
+    code = code.replace(/package\s+[^;]+;/g, "");
 
     // 2. Syntax Validation checks
     const openBraces = (code.match(/\{/g) || []).length;
@@ -59,64 +61,66 @@ export function transpileJavaToJS(javaCode: string): { jsCode: string; error?: s
       return { jsCode: "", error: "Syntax Error: Mismatched curly braces '{' and '}'." };
     }
 
-    // Check for common syntax mistakes like `if (a.charAt(i)equals(b))`
-    const brokenEquals = code.match(/charAt\([^)]+\)equals\(/);
-    if (brokenEquals) {
-      return {
-        jsCode: "",
-        error: "Solution.java: error: cannot find symbol\n  symbol: method equals(String)\n  location: class java.lang.Character / char primitive",
-      };
+    // Extract main method body
+    const mainIdx = code.search(/(?:public\s+)?(?:static\s+)?void\s+main\s*\([^)]*\)\s*\{/);
+    if (mainIdx !== -1) {
+      const afterMain = code.slice(mainIdx);
+      const firstBrace = afterMain.indexOf("{");
+      let depth = 0;
+      let mainBody = "";
+      for (let i = firstBrace; i < afterMain.length; i++) {
+        if (afterMain[i] === "{") depth++;
+        else if (afterMain[i] === "}") {
+          depth--;
+          if (depth === 0) {
+            mainBody = afterMain.slice(firstBrace + 1, i);
+            break;
+          }
+        }
+      }
+      if (mainBody) {
+        code = mainBody;
+      }
+    } else {
+      // Remove class wrapper if no main method
+      code = code.replace(/class\s+[A-Za-z0-9_$]+\s*\{/g, "");
+      if (code.endsWith("}")) {
+        code = code.slice(0, -1);
+      }
     }
 
-    // 3. Extract the contents inside class Solution / methods
-    // If user defined methods or main, transpile into an async function
-    let transformed = code;
+    // Type replacements
+    code = code.replace(/\b(int|long|double|float|boolean|char|String)\s*\[\s*\]\s*\[\s*\]/g, "let ");
+    code = code.replace(/\b(int|long|double|float|boolean|char|String)\s*\[\s*\]/g, "let ");
+    code = code.replace(/\b(int|long|double|float|boolean|char|String)\b(?!\s*\.)/g, "let ");
+    code = code.replace(/\b(final|public|private|protected|static|void)\b/g, "");
 
-    // Replace Java types with let / var
-    transformed = transformed.replace(/\b(int|long|double|float|boolean|char|String)\s*\[\s*\]\s*\[\s*\]/g, "let ");
-    transformed = transformed.replace(/\b(int|long|double|float|boolean|char|String)\s*\[\s*\]/g, "let ");
-    transformed = transformed.replace(/\b(int|long|double|float|boolean|char|String)\b(?!\s*\.)/g, "let ");
-    transformed = transformed.replace(/\b(final|public|private|protected|static|void)\b/g, "");
+    // Array and String constructors
+    code = code.replace(/new\s+(?:int|long|double|float)\s*\[([^\]]+)\]/g, "new Array($1).fill(0)");
+    code = code.replace(/new\s+(?:boolean)\s*\[([^\]]+)\]/g, "new Array($1).fill(false)");
+    code = code.replace(/new\s+(?:String)\s*\[([^\]]+)\]/g, "new Array($1).fill('')");
 
-    // Replace new int[n] or new String[n] with new Array(n).fill(0)
-    transformed = transformed.replace(/new\s+(?:int|long|double|float)\s*\[([^\]]+)\]/g, "new Array($1).fill(0)");
-    transformed = transformed.replace(/new\s+(?:boolean)\s*\[([^\]]+)\]/g, "new Array($1).fill(false)");
-    transformed = transformed.replace(/new\s+(?:String)\s*\[([^\]]+)\]/g, "new Array($1).fill('')");
+    // Arrays & StringBuilder
+    code = code.replace(/Arrays\.sort\s*\(\s*([^)]+)\s*\)/g, "$1.sort((a, b) => (typeof a === 'number' && typeof b === 'number' ? a - b : String(a).localeCompare(String(b))))");
+    code = code.replace(/new\s+StringBuilder\s*\(\s*([^)]+)\s*\)\.reverse\s*\(\s*\)\.toString\s*\(\s*\)/g, "String($1).split('').reverse().join('')");
+    code = code.replace(/\.equals\s*\(\s*([^)]+)\s*\)/g, " === String($1)");
+    code = code.replace(/\.equalsIgnoreCase\s*\(\s*([^)]+)\s*\)/g, ".toLowerCase() === String($1).toLowerCase()");
+    code = code.replace(/(\b[A-Za-z0-9_$]+)\.length\(\)/g, "$1.length");
 
-    // Replace Arrays.sort(arr) with arr.sort((a,b)=>a-b)
-    transformed = transformed.replace(/Arrays\.sort\s*\(\s*([^)]+)\s*\)/g, "$1.sort((a, b) => (typeof a === 'number' && typeof b === 'number' ? a - b : String(a).localeCompare(String(b))))");
-
-    // Replace StringBuilder(s).reverse().toString() with s.split('').reverse().join('')
-    transformed = transformed.replace(/new\s+StringBuilder\s*\(\s*([^)]+)\s*\)\.reverse\s*\(\s*\)\.toString\s*\(\s*\)/g, "String($1).split('').reverse().join('')");
-
-    // Replace s.equals(other) with s === other
-    transformed = transformed.replace(/\.equals\s*\(\s*([^)]+)\s*\)/g, " === String($1)");
-    transformed = transformed.replace(/\.equalsIgnoreCase\s*\(\s*([^)]+)\s*\)/g, ".toLowerCase() === String($1).toLowerCase()");
-
-    // Replace s.charAt(i) with s.charAt(i)
-    // Replace s.length() with s.length
-    transformed = transformed.replace(/(\b[A-Za-z0-9_$]+)\.length\(\)/g, "$1.length");
-
-    // Replace Integer.parseInt(s) with parseInt(s, 10)
-    transformed = transformed.replace(/Integer\.parseInt\s*\(/g, "parseInt(");
-    transformed = transformed.replace(/Double\.parseDouble\s*\(/g, "parseFloat(");
-
-    // Replace Math functions
-    transformed = transformed.replace(/Math\.max/g, "Math.max");
-    transformed = transformed.replace(/Math\.min/g, "Math.min");
-    transformed = transformed.replace(/Math\.abs/g, "Math.abs");
-    transformed = transformed.replace(/Math\.sqrt/g, "Math.sqrt");
-    transformed = transformed.replace(/Math\.pow/g, "Math.pow");
+    // Number parsing & Math
+    code = code.replace(/Integer\.parseInt\s*\(/g, "parseInt(");
+    code = code.replace(/Double\.parseDouble\s*\(/g, "parseFloat(");
+    code = code.replace(/Math\.max/g, "Math.max");
+    code = code.replace(/Math\.min/g, "Math.min");
+    code = code.replace(/Math\.abs/g, "Math.abs");
+    code = code.replace(/Math\.sqrt/g, "Math.sqrt");
+    code = code.replace(/Math\.pow/g, "Math.pow");
 
     // System.out.println / print replacements
-    transformed = transformed.replace(/System\.out\.println\s*\(/g, "__print_ln(");
-    transformed = transformed.replace(/System\.out\.print\s*\(/g, "__print(");
+    code = code.replace(/System\.out\.println\s*\(/g, "__print_ln(");
+    code = code.replace(/System\.out\.print\s*\(/g, "__print(");
 
-    // Handle class / main wrapping
-    transformed = transformed.replace(/class\s+[A-Za-z0-9_$]+\s*\{/g, "");
-    transformed = transformed.replace(/main\s*\(\s*let\s+args\s*\)\s*\{/g, "async function runProgram() {");
-
-    return { jsCode: transformed };
+    return { jsCode: code };
   } catch (err: any) {
     return { jsCode: "", error: err.message || "Failed to parse Java code." };
   }
