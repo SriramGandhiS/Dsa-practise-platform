@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Editor, { OnMount } from "@monaco-editor/react";
 import {
   Play,
@@ -8,7 +8,6 @@ import {
   Terminal,
   Copy,
   Check,
-  X,
   Zap,
   SlidersHorizontal,
   ZoomIn,
@@ -16,23 +15,29 @@ import {
   Moon,
   Sun,
   Trash2,
+  AlertCircle,
+  Clock,
 } from "lucide-react";
 import { analyzeJavaCodeLive, EditorMarker } from "@/lib/java-diagnostics";
 
 export default function RapidCompilerPage() {
-  // Empty start as requested — zero boilerplate, ready to type from line 1
+  // Empty start — zero boilerplate, ready to type from line 1
   const [code, setCode] = useState<string>("");
   const [input, setInput] = useState<string>("");
-  const [showInputDrawer, setShowInputDrawer] = useState<boolean>(false);
+  const [activeRightTab, setActiveRightTab] = useState<"output" | "input">("output");
   const [theme, setTheme] = useState<"vs-dark" | "light">("vs-dark");
 
-  // Output Modal state with frosted backdrop
-  const [showOutputModal, setShowOutputModal] = useState<boolean>(false);
+  // Output execution state
   const [output, setOutput] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [executionTime, setExecutionTime] = useState<number | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
+
+  // Resizable split view
+  const [leftWidth, setLeftWidth] = useState<number>(55);
+  const isDraggingRef = useRef<boolean>(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Live diagnostics
   const [liveMarkers, setLiveMarkers] = useState<EditorMarker[]>([]);
@@ -61,13 +66,41 @@ export default function RapidCompilerPage() {
     });
   };
 
-  // Register Monaco completion snippets (sysout, sop, fori, scanner, psvm)
+  // Dragging logic for splitter
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDraggingRef.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!isDraggingRef.current || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const rawPct = ((ev.clientX - rect.left) / rect.width) * 100;
+      const clampedPct = Math.min(80, Math.max(25, rawPct));
+      setLeftWidth(clampedPct);
+    };
+
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  }, []);
+
+  // Register Monaco completion snippets (sys, sysout, sout, sop, fori, scanner, psvm)
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // Register Eclipse / IntelliJ style snippets
+    // Register Eclipse / IntelliJ style snippets for sys, sysout, etc.
     monaco.languages.registerCompletionItemProvider("java", {
+      triggerCharacters: ["s", "S", "p", "f", "."],
       provideCompletionItems: (model, position) => {
         const word = model.getWordUntilPosition(position);
         const range = {
@@ -81,26 +114,45 @@ export default function RapidCompilerPage() {
           {
             label: "sysout",
             kind: monaco.languages.CompletionItemKind.Snippet,
-            insertText: "System.out.println(${1:value});",
+            insertText: "System.out.println(${1:});",
             insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-            documentation: "System.out.println(value) statement",
+            documentation: "System.out.println() — Print line to standard output",
+            detail: "System.out.println(value);",
             range,
+            filterText: "sys sysout sout system System.out.println",
+            sortText: "0001",
+          },
+          {
+            label: "System.out.println",
+            kind: monaco.languages.CompletionItemKind.Snippet,
+            insertText: "System.out.println(${1:});",
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            documentation: "System.out.println() statement",
+            range,
+            filterText: "sys sysout sout system System.out.println",
+            sortText: "0002",
           },
           {
             label: "sop",
             kind: monaco.languages.CompletionItemKind.Snippet,
-            insertText: "System.out.print(${1:value});",
+            insertText: "System.out.print(${1:});",
             insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-            documentation: "System.out.print(value) statement",
+            documentation: "System.out.print() — Print to standard output without newline",
+            detail: "System.out.print(value);",
             range,
+            filterText: "sop print system.out.print",
+            sortText: "0003",
           },
           {
             label: "fori",
             kind: monaco.languages.CompletionItemKind.Snippet,
             insertText: "for (int ${1:i} = 0; ${1:i} < ${2:n}; ${1:i}++) {\n\t${0}\n}",
             insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-            documentation: "Standard indexed for-loop",
+            documentation: "Standard indexed for loop",
+            detail: "for (int i = 0; i < n; i++)",
             range,
+            filterText: "for fori loop",
+            sortText: "0004",
           },
           {
             label: "scanner",
@@ -108,7 +160,10 @@ export default function RapidCompilerPage() {
             insertText: "Scanner sc = new Scanner(System.in);",
             insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             documentation: "Initialize standard input scanner",
+            detail: "Scanner sc = new Scanner(System.in);",
             range,
+            filterText: "sc scanner input",
+            sortText: "0005",
           },
           {
             label: "psvm",
@@ -117,6 +172,8 @@ export default function RapidCompilerPage() {
             insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             documentation: "public static void main method",
             range,
+            filterText: "psvm main",
+            sortText: "0006",
           },
         ];
 
@@ -124,7 +181,6 @@ export default function RapidCompilerPage() {
       },
     });
 
-    // Focus editor immediately
     editor.focus();
 
     // Keyboard shortcut: Ctrl+Enter / Cmd+Enter to Run
@@ -133,7 +189,7 @@ export default function RapidCompilerPage() {
     });
   };
 
-  // Real-time live diagnostics (red underlines)
+  // Real-time live diagnostics
   useEffect(() => {
     if (!monacoRef.current || !editorRef.current) return;
     if (!code.trim()) {
@@ -168,28 +224,19 @@ export default function RapidCompilerPage() {
     }
   }, [code]);
 
-  // Close modal on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && showOutputModal) {
-        setShowOutputModal(false);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showOutputModal]);
-
+  // Lightning-fast execution
   const handleRun = async () => {
     if (!code.trim()) {
       setError("Please write some Java statements first (e.g. System.out.println(\"Hello World\");) before running.");
-      setShowOutputModal(true);
+      setOutput("");
+      setActiveRightTab("output");
       return;
     }
 
     setIsRunning(true);
     setError(null);
     setOutput("");
-    setShowOutputModal(true);
+    setActiveRightTab("output");
 
     try {
       const res = await fetch("/api/execute", {
@@ -222,7 +269,7 @@ export default function RapidCompilerPage() {
         setOutput("Program executed successfully with no output.");
       }
     } catch (err: any) {
-      setError(err?.message || "Execution service error.");
+      setError(err?.message || "Execution error.");
     } finally {
       setIsRunning(false);
     }
@@ -237,18 +284,18 @@ export default function RapidCompilerPage() {
   return (
     <div
       className={`flex flex-col h-[calc(100vh-3.5rem)] font-sans overflow-hidden transition-colors ${
-        theme === "vs-dark" ? "bg-[#1e1e1e] text-slate-100" : "bg-white text-slate-900"
+        theme === "vs-dark" ? "bg-[#181818] text-slate-100" : "bg-white text-slate-900"
       }`}
     >
       {/* TOP COMPILER ACTION BAR */}
       <header
-        className={`flex items-center justify-between px-4 sm:px-6 py-2.5 border-b shrink-0 shadow-2xs z-10 ${
+        className={`flex items-center justify-between px-4 sm:px-6 py-2 border-b shrink-0 z-10 ${
           theme === "vs-dark"
-            ? "bg-[#252526] border-[#333333]"
-            : "bg-white border-slate-200"
+            ? "bg-[#1f1f1f] border-[#2d2d2d]"
+            : "bg-white border-slate-200 shadow-2xs"
         }`}
       >
-        {/* Left: Rapid Logo & Status */}
+        {/* Left: Rapid Logo */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="p-1 rounded-lg bg-amber-500/10 border border-amber-500/30">
@@ -263,25 +310,6 @@ export default function RapidCompilerPage() {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Custom Input Drawer Toggle */}
-          <button
-            onClick={() => setShowInputDrawer((prev) => !prev)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-              showInputDrawer || input.trim().length > 0
-                ? "bg-blue-600 text-white border-blue-500 shadow-xs"
-                : theme === "vs-dark"
-                ? "bg-[#2d2d2d] text-slate-300 border-[#404040] hover:bg-[#383838]"
-                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-            }`}
-            title="Toggle Custom Input (stdin)"
-          >
-            <SlidersHorizontal className="h-3 w-3" />
-            <span className="hidden sm:inline">Input (stdin)</span>
-            {input.trim().length > 0 && (
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-            )}
-          </button>
-
           {/* Font Zoom Controls */}
           <div
             className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full border shadow-2xs ${
@@ -322,7 +350,7 @@ export default function RapidCompilerPage() {
             {theme === "vs-dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
           </button>
 
-          {/* Clear / Reset Code */}
+          {/* Clear Code */}
           <button
             onClick={() => setCode("")}
             className={`p-1.5 rounded-full border transition-colors shadow-2xs ${
@@ -339,126 +367,155 @@ export default function RapidCompilerPage() {
           <button
             onClick={handleRun}
             disabled={isRunning}
-            className="inline-flex items-center gap-1.5 px-6 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md active:scale-95 disabled:opacity-50 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-6 py-1.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md active:scale-95 disabled:opacity-50 transition-all cursor-pointer"
           >
             <Play className={`h-3.5 w-3.5 ${isRunning ? "animate-spin" : ""}`} />
-            <span>{isRunning ? "Running..." : "Run Code"}</span>
+            <span>{isRunning ? "Running..." : "Run"}</span>
           </button>
         </div>
       </header>
 
-      {/* OPTIONAL CUSTOM STDIN DRAWER */}
-      {showInputDrawer && (
+      {/* MAIN SPLIT-VIEW WORKSPACE (PROGRAMIZ STYLE) */}
+      <div ref={containerRef} className="flex-1 flex overflow-hidden relative select-none">
+        {/* LEFT COLUMN: MONACO EDITOR */}
         <div
-          className={`border-b p-4 transition-all animate-in slide-in-from-top-2 duration-150 shrink-0 ${
-            theme === "vs-dark"
-              ? "bg-[#181818] border-[#333333]"
-              : "bg-slate-50 border-slate-200"
+          style={{ width: `${leftWidth}%` }}
+          className={`flex flex-col overflow-hidden shrink-0 relative border-r ${
+            theme === "vs-dark" ? "border-[#2d2d2d] bg-[#1e1e1e]" : "border-slate-200 bg-white"
           }`}
         >
-          <div className="max-w-4xl mx-auto flex flex-col space-y-1.5">
-            <div className="flex items-center justify-between text-xs font-bold">
-              <span className="uppercase text-[10px] tracking-wider text-slate-400">
-                Standard Input (stdin)
+          {/* Editor Header Tab */}
+          <div
+            className={`flex items-center justify-between px-4 py-2 border-b text-xs font-mono font-bold ${
+              theme === "vs-dark"
+                ? "bg-[#252526] border-[#2d2d2d] text-slate-300"
+                : "bg-slate-50 border-slate-200 text-slate-700"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span>Main.java</span>
+              <span className="text-[10px] font-sans font-normal opacity-60">
+                (Type <code className="font-bold text-amber-400">sysout</code> for println)
               </span>
-              <button
-                onClick={() => setShowInputDrawer(false)}
-                className="text-slate-400 hover:text-slate-200 text-[11px]"
-              >
-                ✕ Close
-              </button>
             </div>
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Enter input values here (read via Scanner in Java)..."
-              rows={3}
-              className={`w-full p-2.5 rounded-xl border font-mono text-xs resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/30 shadow-2xs ${
-                theme === "vs-dark"
-                  ? "bg-[#252526] border-[#404040] text-slate-100 placeholder-slate-500"
-                  : "bg-white border-slate-200 text-slate-800"
-              }`}
+
+            <button
+              onClick={handleRun}
+              disabled={isRunning}
+              className="inline-flex items-center gap-1 px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-sans text-xs font-bold transition-colors cursor-pointer"
+            >
+              <Play className="h-3 w-3" />
+              <span>Run ▶</span>
+            </button>
+          </div>
+
+          {/* Full Height Editor with Big Typography */}
+          <div className="flex-1 relative">
+            <Editor
+              height="100%"
+              defaultLanguage="java"
+              theme={theme}
+              value={code}
+              onChange={(v) => setCode(v || "")}
+              onMount={handleEditorDidMount}
+              options={{
+                fontSize: editorFontSize,
+                lineHeight: Math.round(editorFontSize * 1.6),
+                fontFamily: "'Fira Code', 'Consolas', 'Courier New', monospace",
+                fontLigatures: true,
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                lineNumbers: "on",
+                lineNumbersMinChars: 3,
+                automaticLayout: true,
+                tabSize: 4,
+                wordWrap: "on",
+                renderLineHighlight: "all",
+                glyphMargin: false,
+                folding: true,
+                matchBrackets: "always",
+                autoClosingBrackets: "always",
+                autoClosingQuotes: "always",
+                quickSuggestions: true,
+                suggestOnTriggerCharacters: true,
+                padding: { top: 16, bottom: 16 },
+              }}
             />
           </div>
         </div>
-      )}
 
-      {/* MAIN CENTERED HERO CODE CANVAS */}
-      <main className="flex-1 relative overflow-hidden flex flex-col">
-        {/* Full-Height Monaco Editor with Big Spacious Typography */}
-        <div className="flex-1 relative">
-          <Editor
-            height="100%"
-            defaultLanguage="java"
-            theme={theme}
-            value={code}
-            onChange={(v) => setCode(v || "")}
-            onMount={handleEditorDidMount}
-            options={{
-              fontSize: editorFontSize,
-              lineHeight: Math.round(editorFontSize * 1.6),
-              fontFamily: "'Fira Code', 'Consolas', 'Courier New', monospace",
-              fontLigatures: true,
-              minimap: { enabled: false },
-              scrollBeyondLastLine: false,
-              lineNumbers: "on",
-              lineNumbersMinChars: 3,
-              automaticLayout: true,
-              tabSize: 4,
-              wordWrap: "on",
-              renderLineHighlight: "all",
-              glyphMargin: false,
-              folding: true,
-              matchBrackets: "always",
-              autoClosingBrackets: "always",
-              autoClosingQuotes: "always",
-              quickSuggestions: true,
-              suggestOnTriggerCharacters: true,
-              padding: { top: 18, bottom: 18 },
-            }}
-          />
-        </div>
-      </main>
-
-      {/* FROSTED GLASS BLUR OUTPUT MODAL */}
-      {showOutputModal && (
+        {/* DRAGGABLE DIVIDER / SPLITTER */}
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-md transition-all animate-in fade-in duration-150"
-          onClick={() => setShowOutputModal(false)}
+          onMouseDown={handleMouseDown}
+          className={`w-2.5 relative z-30 cursor-col-resize group flex items-center justify-center transition-colors border-x shrink-0 ${
+            theme === "vs-dark"
+              ? "bg-[#181818] hover:bg-blue-600/30 border-[#2d2d2d]"
+              : "bg-slate-100 hover:bg-blue-100 border-slate-200"
+          }`}
+          title="Drag to resize panels"
         >
-          {/* Modal Card */}
+          <div className="h-8 w-1 rounded-full bg-slate-500 group-hover:bg-blue-500 transition-colors" />
+        </div>
+
+        {/* RIGHT COLUMN: PERMANENT FAST OUTPUT & INPUT PANEL */}
+        <div
+          style={{ width: `${100 - leftWidth}%` }}
+          className={`flex flex-col overflow-hidden text-xs flex-1 ${
+            theme === "vs-dark" ? "bg-[#141414]" : "bg-slate-900 text-white"
+          }`}
+        >
+          {/* Right Panel Header Tabs */}
           <div
-            className="w-full max-w-3xl max-h-[85vh] rounded-2xl bg-[#1e1e1e] border border-[#333333] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150 text-slate-100"
-            onClick={(e) => e.stopPropagation()}
+            className={`flex items-center justify-between px-4 py-2 border-b shrink-0 ${
+              theme === "vs-dark" ? "bg-[#1f1f1f] border-[#2d2d2d]" : "bg-slate-950 border-slate-800"
+            }`}
           >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between px-5 py-3.5 bg-[#252526] border-b border-[#333333] text-xs">
-              <div className="flex items-center gap-2.5">
-                <Terminal className="h-4 w-4 text-emerald-400" />
-                <span className="font-bold text-white text-sm">Program Output</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setActiveRightTab("output")}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-bold text-xs transition-colors ${
+                  activeRightTab === "output"
+                    ? "bg-[#333333] text-white"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <Terminal className="h-3.5 w-3.5 text-emerald-400" />
+                <span>Output</span>
                 {executionTime !== null && !error && (
-                  <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300">
                     {executionTime}ms
                   </span>
                 )}
-                {error && (
-                  <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30 font-bold">
-                    Error
-                  </span>
-                )}
-              </div>
+              </button>
 
-              {/* Action Buttons */}
+              <button
+                onClick={() => setActiveRightTab("input")}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-bold text-xs transition-colors ${
+                  activeRightTab === "input"
+                    ? "bg-[#333333] text-white"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5 text-blue-400" />
+                <span>Input (stdin)</span>
+                {input.trim().length > 0 && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+                )}
+              </button>
+            </div>
+
+            {/* Right Tools */}
+            {activeRightTab === "output" && (
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleCopy}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#333333] hover:bg-[#444444] text-slate-200 transition-colors text-xs font-semibold"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded text-slate-400 hover:text-white hover:bg-[#333333] transition-colors text-[11px]"
                   title="Copy Output"
                 >
                   {copied ? (
                     <>
                       <Check className="h-3 w-3 text-emerald-400" />
-                      <span className="text-emerald-400">Copied</span>
+                      <span className="text-emerald-400 font-medium">Copied</span>
                     </>
                   ) : (
                     <>
@@ -469,53 +526,66 @@ export default function RapidCompilerPage() {
                 </button>
 
                 <button
-                  onClick={() => setShowOutputModal(false)}
-                  className="p-1.5 rounded-full bg-[#333333] hover:bg-[#444444] text-slate-400 hover:text-white transition-colors"
-                  title="Close (Esc)"
+                  onClick={() => {
+                    setOutput("");
+                    setError(null);
+                  }}
+                  className="p-1 rounded text-slate-400 hover:text-white hover:bg-[#333333] transition-colors"
+                  title="Clear Terminal"
                 >
-                  <X className="h-4 w-4" />
+                  <RotateCcw className="h-3 w-3" />
                 </button>
               </div>
-            </div>
+            )}
+          </div>
 
-            {/* Modal Terminal Body */}
-            <div className="flex-1 p-6 overflow-y-auto font-mono text-sm select-text bg-[#141414]">
-              {isRunning ? (
-                <div className="flex flex-col items-center justify-center py-12 space-y-3 text-slate-400">
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-400 border-t-transparent" />
-                  <span className="font-sans text-sm">Compiling & executing Java statements...</span>
+          {/* Right Panel Body */}
+          <div className="flex-1 overflow-y-auto p-4 font-mono text-sm select-text">
+            {activeRightTab === "output" ? (
+              isRunning ? (
+                <div className="flex items-center gap-2.5 text-slate-400 py-4">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
+                  <span className="font-sans text-xs">Compiling & executing...</span>
                 </div>
               ) : error ? (
-                <div className="space-y-3">
-                  <div className="p-4 rounded-xl bg-red-950/40 border border-red-800/60 text-red-300 text-xs leading-relaxed">
-                    <span className="font-bold block mb-1 text-red-200 font-sans text-sm">Compilation / Syntax Error:</span>
-                    <pre className="whitespace-pre-wrap font-mono text-red-200 overflow-x-auto text-xs leading-normal">
-                      {error}
-                    </pre>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 text-red-400 font-sans font-bold text-xs">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>Compilation / Runtime Error:</span>
                   </div>
+                  <pre className="text-red-300 font-mono text-xs whitespace-pre-wrap leading-relaxed p-3 rounded-lg bg-red-950/40 border border-red-900/50 overflow-x-auto">
+                    {error}
+                  </pre>
                 </div>
               ) : output ? (
                 <pre className="text-emerald-400 whitespace-pre-wrap leading-relaxed overflow-x-auto text-sm">
                   {output}
                 </pre>
               ) : (
-                <span className="text-slate-500">No output printed.</span>
-              )}
-            </div>
-
-            {/* Modal Footer with quick close info */}
-            <div className="px-5 py-2.5 bg-[#252526] border-t border-[#333333] text-[11px] text-slate-400 font-sans flex items-center justify-between">
-              <span>Press <kbd className="px-1.5 py-0.5 rounded bg-[#333333] text-slate-200 font-mono text-[10px]">Esc</kbd> or click Close to return to code</span>
-              <button
-                onClick={() => setShowOutputModal(false)}
-                className="font-bold text-slate-200 hover:text-white transition-colors"
-              >
-                Back to Code Editor →
-              </button>
-            </div>
+                <div className="text-slate-500 font-sans text-xs py-2">
+                  <span>Click <strong className="text-slate-300">Run ▶</strong> to compile and see output here.</span>
+                </div>
+              )
+            ) : (
+              <div className="h-full flex flex-col space-y-2">
+                <span className="font-sans text-xs text-slate-400">
+                  Standard Input (passed to Scanner in Java):
+                </span>
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Enter inputs here (e.g. 5, hello, 10 20)..."
+                  className={`flex-1 w-full p-3 rounded-lg border font-mono text-xs resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                    theme === "vs-dark"
+                      ? "bg-[#1e1e1e] border-[#333333] text-slate-200"
+                      : "bg-slate-800 border-slate-700 text-white"
+                  }`}
+                />
+              </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
