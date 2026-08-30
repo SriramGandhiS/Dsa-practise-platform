@@ -227,23 +227,22 @@ export default function RapidCompilerPage() {
           className="flex flex-col overflow-hidden shrink-0 relative bg-[#1e1f26] border-r border-[#2a2b36]"
         >
           {/* Editor Header Bar */}
-          <div className="flex items-center justify-between px-4 py-2 bg-[#1b1c23] border-b border-[#2a2b36] shrink-0 h-11">
-            {/* Tab: Main.java */}
-            <div className="flex items-center">
-              <div className="px-3 py-1.5 bg-[#252631] text-[#e1e4e8] rounded-t font-mono text-xs font-semibold border-b-2 border-[#0d6efd]">
+          <div className="flex items-center justify-between px-3 py-1.5 bg-[#1b1c23] border-b border-[#2a2b36] shrink-0 h-10">
+            {/* Main.java tab & Run Button placed together */}
+            <div className="flex items-center gap-2.5">
+              <div className="px-3 py-1 bg-[#252631] text-[#e1e4e8] rounded font-mono text-xs font-semibold border-b-2 border-[#0d6efd]">
                 Main.java
               </div>
-            </div>
 
-            {/* Run Button on top-right of editor */}
-            <button
-              onClick={handleRun}
-              disabled={isRunning}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-md bg-[#0d6efd] hover:bg-[#0b5ed7] text-white font-sans text-xs font-bold shadow-xs active:scale-95 disabled:opacity-50 transition-all cursor-pointer"
-            >
-              <Play className={`h-3.5 w-3.5 fill-current ${isRunning ? "animate-spin" : ""}`} />
-              <span>{isRunning ? "Running..." : "Run"}</span>
-            </button>
+              <button
+                onClick={handleRun}
+                disabled={isRunning}
+                className="inline-flex items-center gap-1 px-3 py-1 rounded bg-[#0d6efd] hover:bg-[#0b5ed7] text-white font-sans text-xs font-bold shadow-xs active:scale-95 disabled:opacity-50 transition-all cursor-pointer"
+              >
+                <Play className={`h-3 w-3 fill-current ${isRunning ? "animate-spin" : ""}`} />
+                <span>{isRunning ? "Running..." : "Run"}</span>
+              </button>
+            </div>
           </div>
 
           {/* Monaco Editor */}
