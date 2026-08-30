@@ -93,6 +93,9 @@ function buildExecutableCode(userCode: string, className: string): string {
 
   // If no class exists, user is writing rapid naked statements! Auto-wrap in matching runner class
   if (!hasClass) {
+    const userHasScannerDecl = /\bScanner\s+([a-zA-Z0-9_$]+)\s*=/i.test(userCode);
+    const scannerHeader = userHasScannerDecl ? "" : "Scanner sc = new Scanner(System.in);";
+
     return `
 import java.util.*;
 import java.io.*;
@@ -100,7 +103,7 @@ import java.math.*;
 
 public class ${className}Runner {
     public static void main(String[] args) throws Exception {
-        Scanner sc = new Scanner(System.in);
+        ${scannerHeader}
         ${userCode}
     }
 }
