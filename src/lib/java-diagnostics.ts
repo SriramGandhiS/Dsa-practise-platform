@@ -265,20 +265,30 @@ export function analyzeJavaCodeLive(code: string): EditorMarker[] {
   // 1. Symbol Table Collection
   const symbolTypeMap = new Map<string, string>();
   symbolTypeMap.set("args", "String[]");
-  symbolTypeMap.set("sc", "Scanner");
-  symbolTypeMap.set("scanner", "Scanner");
-  symbolTypeMap.set("in", "Scanner");
 
-  for (let i = 0; i < tokens.length - 1; i++) {
+  for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
-    const next = tokens[i + 1];
 
-    // Detect declarations: Type varName
+    // Detect array declarations: Type[] varName (tokens: Type, [, ], varName)
     if (
-      (PRIMITIVE_TYPES.has(t.value) || STANDARD_CLASSES.has(t.value) || t.value.endsWith("[]")) &&
-      next.type === "IDENTIFIER"
+      (PRIMITIVE_TYPES.has(t.value) || STANDARD_CLASSES.has(t.value)) &&
+      i + 3 < tokens.length &&
+      tokens[i + 1].value === "[" &&
+      tokens[i + 2].value === "]" &&
+      tokens[i + 3].type === "IDENTIFIER"
     ) {
-      symbolTypeMap.set(next.value, t.value);
+      symbolTypeMap.set(tokens[i + 3].value, t.value + "[]");
+      i += 3; // skip past the declaration
+      continue;
+    }
+
+    // Detect simple declarations: Type varName
+    if (
+      (PRIMITIVE_TYPES.has(t.value) || STANDARD_CLASSES.has(t.value)) &&
+      i + 1 < tokens.length &&
+      tokens[i + 1].type === "IDENTIFIER"
+    ) {
+      symbolTypeMap.set(tokens[i + 1].value, t.value);
     }
   }
 
@@ -331,21 +341,21 @@ export function analyzeJavaCodeLive(code: string): EditorMarker[] {
   }
 
   // 3. Common Java Typo & Casing Errors (IntelliJ Quick-Fix checks)
-  const caseSensitivityMap: Record<string, { correct: string; desc: string }> = {
-    system: { correct: "System", desc: "java.lang.System" },
-    scanner: { correct: "Scanner", desc: "java.util.Scanner" },
-    string: { correct: "String", desc: "java.lang.String" },
-    integer: { correct: "int' or 'Integer", desc: "wrapper class" },
-    character: { correct: "char' or 'Character", desc: "wrapper class" },
-    bool: { correct: "boolean", desc: "primitive type" },
-    math: { correct: "Math", desc: "java.lang.Math" },
-    arrays: { correct: "Arrays", desc: "java.util.Arrays" },
-    collections: { correct: "Collections", desc: "java.util.Collections" },
-    arraylist: { correct: "ArrayList", desc: "java.util.ArrayList" },
-    hashmap: { correct: "HashMap", desc: "java.util.HashMap" },
-    hashset: { correct: "HashSet", desc: "java.util.HashSet" },
-    stringbuilder: { correct: "StringBuilder", desc: "java.lang.StringBuilder" },
-  };
+  const caseSensitivityMap = new Map<string, { correct: string; desc: string }>([
+    ["system", { correct: "System", desc: "java.lang.System" }],
+    ["scanner", { correct: "Scanner", desc: "java.util.Scanner" }],
+    ["string", { correct: "String", desc: "java.lang.String" }],
+    ["integer", { correct: "int' or 'Integer", desc: "wrapper class" }],
+    ["character", { correct: "char' or 'Character", desc: "wrapper class" }],
+    ["bool", { correct: "boolean", desc: "primitive type" }],
+    ["math", { correct: "Math", desc: "java.lang.Math" }],
+    ["arrays", { correct: "Arrays", desc: "java.util.Arrays" }],
+    ["collections", { correct: "Collections", desc: "java.util.Collections" }],
+    ["arraylist", { correct: "ArrayList", desc: "java.util.ArrayList" }],
+    ["hashmap", { correct: "HashMap", desc: "java.util.HashMap" }],
+    ["hashset", { correct: "HashSet", desc: "java.util.HashSet" }],
+    ["stringbuilder", { correct: "StringBuilder", desc: "java.lang.StringBuilder" }],
+  ]);
 
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
@@ -353,11 +363,13 @@ export function analyzeJavaCodeLive(code: string): EditorMarker[] {
     const next = i < tokens.length - 1 ? tokens[i + 1] : null;
 
     // A. Lowercase standard class usage (e.g. system.out.println or string s = ...)
-    const typoInfo = caseSensitivityMap[t.value.toLowerCase()];
+    const typoInfo = caseSensitivityMap.get(t.value.toLowerCase());
     if (typoInfo && t.value === t.value.toLowerCase() && t.type === "IDENTIFIER") {
       // Don't flag if it's a declared variable name (e.g. `Scanner scanner = ...`)
-      const isVarName = prev && (PRIMITIVE_TYPES.has(prev.value) || STANDARD_CLASSES.has(prev.value));
-      if (!isVarName && next && (next.value === "." || next.type === "IDENTIFIER")) {
+      const isVarDecl = prev && (PRIMITIVE_TYPES.has(prev.value) || STANDARD_CLASSES.has(prev.value));
+      // Don't flag if this identifier exists in the symbol table as a declared variable
+      const isDeclaredVar = symbolTypeMap.has(t.value);
+      if (!isVarDecl && !isDeclaredVar && next && (next.value === "." || next.type === "IDENTIFIER")) {
         rawMarkers.push({
           startLineNumber: t.line,
           startColumn: t.col,
@@ -371,17 +383,23 @@ export function analyzeJavaCodeLive(code: string): EditorMarker[] {
 
     // B. Method name typos (e.g. .printline or .nextint)
     if (t.value === "." && next && next.type === "IDENTIFIER") {
-      const methodTypos: Record<string, string> = {
-        printline: "println",
-        printLn: "println",
-        nextint: "nextInt",
-        nextline: "nextLine",
-        charat: "charAt",
-        tolowercase: "toLowerCase",
-        touppercase: "toUpperCase",
-      };
+      const methodTypos = new Map<string, string>([
+        ["printline", "println"],
+        ["printLn", "println"],
+        ["Println", "println"],
+        ["nextint", "nextInt"],
+        ["nextline", "nextLine"],
+        ["charat", "charAt"],
+        ["tolowercase", "toLowerCase"],
+        ["touppercase", "toUpperCase"],
+        ["Tostring", "toString"],
+        ["indexof", "indexOf"],
+        ["lastindexof", "lastIndexOf"],
+        ["parseint", "parseInt"],
+        ["parsedouble", "parseDouble"],
+      ]);
 
-      const correctMethod = methodTypos[next.value];
+      const correctMethod = methodTypos.get(next.value);
       if (correctMethod) {
         rawMarkers.push({
           startLineNumber: next.line,
@@ -468,11 +486,19 @@ export function analyzeJavaCodeLive(code: string): EditorMarker[] {
     const lineNum = lIdx + 1;
     const line = lines[lIdx];
 
-    // Strip comments
+    // Strip comments (but not // inside string literals)
     let codeOnly = line;
-    const cIdx = line.indexOf("//");
-    if (cIdx !== -1) {
-      codeOnly = line.slice(0, cIdx);
+    let inStr = false;
+    let inChar = false;
+    for (let ci = 0; ci < line.length; ci++) {
+      const ch = line[ci];
+      if (ch === "\\" && (inStr || inChar)) { ci++; continue; }
+      if (ch === '"' && !inChar) { inStr = !inStr; continue; }
+      if (ch === "'" && !inStr) { inChar = !inChar; continue; }
+      if (!inStr && !inChar && ch === "/" && line[ci + 1] === "/") {
+        codeOnly = line.slice(0, ci);
+        break;
+      }
     }
 
     const trimmed = codeOnly.trim();
