@@ -20,7 +20,9 @@ const STANDARD_CLASSES = new Set([
   "String", "Scanner", "System", "Math", "Integer", "Character", "Boolean", "Double", "Long",
   "Float", "Short", "Byte", "Arrays", "Collections", "ArrayList", "HashMap", "HashSet",
   "LinkedList", "Queue", "Stack", "List", "Map", "Set", "StringBuilder", "StringBuffer",
-  "Solution", "Main", "Object", "Exception", "Override", "PrintStream", "InputStream"
+  "Solution", "Main", "Object", "Exception", "Override", "PrintStream", "InputStream",
+  "PriorityQueue", "Collection", "TreeMap", "TreeSet", "Deque", "ArrayDeque",
+  "Iterator", "Comparable", "Comparator", "Random", "LinkedHashMap", "LinkedHashSet",
 ]);
 
 const PRIMITIVE_TYPES = new Set([

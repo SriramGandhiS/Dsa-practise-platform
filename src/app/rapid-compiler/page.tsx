@@ -101,7 +101,7 @@ export default function RapidCompilerPage() {
     monaco.editor.setTheme("programiz-vibrant");
 
     monaco.languages.registerCompletionItemProvider("java", {
-      triggerCharacters: ["s", "S", "p", "f", "."],
+      triggerCharacters: [".", "s", "S", "p", "f", "n", "a", "h", "l"],
       provideCompletionItems: (model, position) => {
         const word = model.getWordUntilPosition(position);
         const range = {
@@ -111,60 +111,324 @@ export default function RapidCompilerPage() {
           endColumn: word.endColumn,
         };
 
-        const suggestions = [
-          {
-            label: "sysout",
-            kind: monaco.languages.CompletionItemKind.Snippet,
-            insertText: "System.out.println(${1:});",
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-            documentation: "System.out.println()",
-            detail: "System.out.println(value);",
-            range,
-            filterText: "sys sysout sout system System.out.println",
-            sortText: "0001",
-          },
-          {
-            label: "System.out.println",
-            kind: monaco.languages.CompletionItemKind.Snippet,
-            insertText: "System.out.println(${1:});",
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-            documentation: "System.out.println() statement",
-            range,
-            filterText: "sys sysout sout system System.out.println",
-            sortText: "0002",
-          },
-          {
-            label: "sop",
-            kind: monaco.languages.CompletionItemKind.Snippet,
-            insertText: "System.out.print(${1:});",
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-            documentation: "System.out.print()",
-            detail: "System.out.print(value);",
-            range,
-            filterText: "sop print system.out.print",
-            sortText: "0003",
-          },
-          {
-            label: "fori",
-            kind: monaco.languages.CompletionItemKind.Snippet,
-            insertText: "for (int ${1:i} = 0; ${1:i} < ${2:n}; ${1:i}++) {\n\t${0}\n}",
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-            documentation: "for (int i = 0; i < n; i++) loop",
-            range,
-            filterText: "for fori loop",
-            sortText: "0004",
-          },
-          {
-            label: "scanner",
-            kind: monaco.languages.CompletionItemKind.Snippet,
-            insertText: "Scanner sc = new Scanner(System.in);",
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-            documentation: "Scanner sc = new Scanner(System.in);",
-            range,
-            filterText: "sc scanner input",
-            sortText: "0005",
-          },
-        ];
+        // Check if we're typing after a dot (method completion context)
+        const lineContent = model.getLineContent(position.lineNumber);
+        const textBeforeCursor = lineContent.substring(0, position.column - 1);
+        const afterDot = /\.(\w*)$/.test(textBeforeCursor);
+
+        const suggestions: any[] = [];
+
+        if (afterDot) {
+          // ===== CONTEXT-AWARE METHOD COMPLETIONS =====
+
+          // List / ArrayList / LinkedList methods
+          const listMethods = [
+            { label: "add", insert: "add(${1:element})", doc: "Appends element to the end of the list" },
+            { label: "add(index, element)", insert: "add(${1:index}, ${2:element})", doc: "Inserts element at specified index" },
+            { label: "get", insert: "get(${1:index})", doc: "Returns element at specified index" },
+            { label: "set", insert: "set(${1:index}, ${2:element})", doc: "Replaces element at specified index" },
+            { label: "remove", insert: "remove(${1:index})", doc: "Removes element at specified index" },
+            { label: "size", insert: "size()", doc: "Returns the number of elements" },
+            { label: "isEmpty", insert: "isEmpty()", doc: "Returns true if list is empty" },
+            { label: "contains", insert: "contains(${1:element})", doc: "Returns true if list contains element" },
+            { label: "indexOf", insert: "indexOf(${1:element})", doc: "Returns first index of element, or -1" },
+            { label: "clear", insert: "clear()", doc: "Removes all elements" },
+            { label: "toArray", insert: "toArray()", doc: "Returns an array of all elements" },
+            { label: "addAll", insert: "addAll(${1:collection})", doc: "Adds all elements from another collection" },
+            { label: "sort", insert: "sort(${1:Comparator.naturalOrder()})", doc: "Sorts the list" },
+            { label: "subList", insert: "subList(${1:fromIndex}, ${2:toIndex})", doc: "Returns a sub-list view" },
+            { label: "iterator", insert: "iterator()", doc: "Returns an iterator over elements" },
+          ];
+
+          // Map / HashMap methods
+          const mapMethods = [
+            { label: "put", insert: "put(${1:key}, ${2:value})", doc: "Associates key with value" },
+            { label: "get", insert: "get(${1:key})", doc: "Returns value for key, or null" },
+            { label: "getOrDefault", insert: "getOrDefault(${1:key}, ${2:defaultValue})", doc: "Returns value for key, or default" },
+            { label: "containsKey", insert: "containsKey(${1:key})", doc: "Returns true if map contains key" },
+            { label: "containsValue", insert: "containsValue(${1:value})", doc: "Returns true if map contains value" },
+            { label: "remove", insert: "remove(${1:key})", doc: "Removes entry for key" },
+            { label: "size", insert: "size()", doc: "Returns number of key-value pairs" },
+            { label: "isEmpty", insert: "isEmpty()", doc: "Returns true if map is empty" },
+            { label: "keySet", insert: "keySet()", doc: "Returns a Set of all keys" },
+            { label: "values", insert: "values()", doc: "Returns a Collection of all values" },
+            { label: "entrySet", insert: "entrySet()", doc: "Returns a Set of Map.Entry pairs" },
+            { label: "putIfAbsent", insert: "putIfAbsent(${1:key}, ${2:value})", doc: "Put only if key is absent" },
+            { label: "clear", insert: "clear()", doc: "Removes all entries" },
+          ];
+
+          // Set / HashSet methods
+          const setMethods = [
+            { label: "add", insert: "add(${1:element})", doc: "Adds element (no duplicates)" },
+            { label: "remove", insert: "remove(${1:element})", doc: "Removes element" },
+            { label: "contains", insert: "contains(${1:element})", doc: "Returns true if set contains element" },
+            { label: "size", insert: "size()", doc: "Returns number of elements" },
+            { label: "isEmpty", insert: "isEmpty()", doc: "Returns true if set is empty" },
+            { label: "clear", insert: "clear()", doc: "Removes all elements" },
+            { label: "iterator", insert: "iterator()", doc: "Returns an iterator" },
+            { label: "toArray", insert: "toArray()", doc: "Returns an array" },
+          ];
+
+          // Stack methods
+          const stackMethods = [
+            { label: "push", insert: "push(${1:element})", doc: "Pushes element onto top of stack" },
+            { label: "pop", insert: "pop()", doc: "Removes and returns top element" },
+            { label: "peek", insert: "peek()", doc: "Returns top element without removing" },
+            { label: "isEmpty", insert: "isEmpty()", doc: "Returns true if stack is empty" },
+            { label: "size", insert: "size()", doc: "Returns number of elements" },
+            { label: "search", insert: "search(${1:element})", doc: "Returns 1-based position from top" },
+          ];
+
+          // Queue methods
+          const queueMethods = [
+            { label: "offer", insert: "offer(${1:element})", doc: "Inserts element into queue" },
+            { label: "poll", insert: "poll()", doc: "Removes and returns head, or null" },
+            { label: "peek", insert: "peek()", doc: "Returns head without removing, or null" },
+            { label: "add", insert: "add(${1:element})", doc: "Inserts element (throws if full)" },
+            { label: "remove", insert: "remove()", doc: "Removes and returns head (throws if empty)" },
+            { label: "isEmpty", insert: "isEmpty()", doc: "Returns true if queue is empty" },
+            { label: "size", insert: "size()", doc: "Returns number of elements" },
+          ];
+
+          // String methods
+          const stringMethods = [
+            { label: "length", insert: "length()", doc: "Returns the length of the string" },
+            { label: "charAt", insert: "charAt(${1:index})", doc: "Returns char at index" },
+            { label: "substring", insert: "substring(${1:beginIndex}, ${2:endIndex})", doc: "Returns substring" },
+            { label: "indexOf", insert: "indexOf(${1:str})", doc: "Returns first index of str, or -1" },
+            { label: "lastIndexOf", insert: "lastIndexOf(${1:str})", doc: "Returns last index of str" },
+            { label: "equals", insert: "equals(${1:other})", doc: "Compares string content" },
+            { label: "equalsIgnoreCase", insert: "equalsIgnoreCase(${1:other})", doc: "Case-insensitive comparison" },
+            { label: "contains", insert: "contains(${1:str})", doc: "Returns true if contains str" },
+            { label: "startsWith", insert: "startsWith(${1:prefix})", doc: "Returns true if starts with prefix" },
+            { label: "endsWith", insert: "endsWith(${1:suffix})", doc: "Returns true if ends with suffix" },
+            { label: "toLowerCase", insert: "toLowerCase()", doc: "Converts to lowercase" },
+            { label: "toUpperCase", insert: "toUpperCase()", doc: "Converts to uppercase" },
+            { label: "trim", insert: "trim()", doc: "Removes leading/trailing whitespace" },
+            { label: "replace", insert: "replace(${1:old}, ${2:new})", doc: "Replaces occurrences" },
+            { label: "replaceAll", insert: "replaceAll(${1:regex}, ${2:replacement})", doc: "Replaces all regex matches" },
+            { label: "split", insert: "split(${1:regex})", doc: "Splits string by regex" },
+            { label: "toCharArray", insert: "toCharArray()", doc: "Converts to char array" },
+            { label: "isEmpty", insert: "isEmpty()", doc: "Returns true if string is empty" },
+            { label: "compareTo", insert: "compareTo(${1:other})", doc: "Lexicographic comparison" },
+            { label: "toString", insert: "toString()", doc: "Returns the string itself" },
+          ];
+
+          // StringBuilder methods
+          const sbMethods = [
+            { label: "append", insert: "append(${1:value})", doc: "Appends value to builder" },
+            { label: "insert", insert: "insert(${1:offset}, ${2:value})", doc: "Inserts value at offset" },
+            { label: "delete", insert: "delete(${1:start}, ${2:end})", doc: "Deletes chars from start to end" },
+            { label: "reverse", insert: "reverse()", doc: "Reverses the character sequence" },
+            { label: "toString", insert: "toString()", doc: "Converts builder to String" },
+            { label: "length", insert: "length()", doc: "Returns current length" },
+            { label: "charAt", insert: "charAt(${1:index})", doc: "Returns char at index" },
+            { label: "replace", insert: "replace(${1:start}, ${2:end}, ${3:str})", doc: "Replaces substring" },
+          ];
+
+          // Scanner methods
+          const scannerMethods = [
+            { label: "nextInt", insert: "nextInt()", doc: "Reads next integer" },
+            { label: "nextLine", insert: "nextLine()", doc: "Reads next line" },
+            { label: "next", insert: "next()", doc: "Reads next token" },
+            { label: "nextDouble", insert: "nextDouble()", doc: "Reads next double" },
+            { label: "nextLong", insert: "nextLong()", doc: "Reads next long" },
+            { label: "nextFloat", insert: "nextFloat()", doc: "Reads next float" },
+            { label: "hasNext", insert: "hasNext()", doc: "Returns true if there is another token" },
+            { label: "hasNextInt", insert: "hasNextInt()", doc: "Returns true if next token is int" },
+            { label: "hasNextLine", insert: "hasNextLine()", doc: "Returns true if there is another line" },
+            { label: "close", insert: "close()", doc: "Closes the scanner" },
+          ];
+
+          // Combine all methods and add them — user will get context-filtered results
+          const allMethods = [
+            ...listMethods, ...mapMethods, ...setMethods,
+            ...stackMethods, ...queueMethods,
+            ...stringMethods, ...sbMethods, ...scannerMethods,
+          ];
+
+          // Deduplicate by label
+          const seen = new Set<string>();
+          for (const m of allMethods) {
+            if (seen.has(m.label)) continue;
+            seen.add(m.label);
+            suggestions.push({
+              label: m.label,
+              kind: monaco.languages.CompletionItemKind.Method,
+              insertText: m.insert,
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: m.doc,
+              detail: m.doc,
+              range,
+            });
+          }
+        } else {
+          // ===== STANDALONE SNIPPET COMPLETIONS =====
+          suggestions.push(
+            {
+              label: "sysout",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: "System.out.println(${1:});",
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: "System.out.println()",
+              detail: "System.out.println(value);",
+              range,
+              filterText: "sys sysout sout system System.out.println",
+              sortText: "0001",
+            },
+            {
+              label: "System.out.println",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: "System.out.println(${1:});",
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: "System.out.println() statement",
+              range,
+              filterText: "sys sysout sout system System.out.println",
+              sortText: "0002",
+            },
+            {
+              label: "sop",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: "System.out.print(${1:});",
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: "System.out.print()",
+              detail: "System.out.print(value);",
+              range,
+              filterText: "sop print system.out.print",
+              sortText: "0003",
+            },
+            {
+              label: "fori",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: "for (int ${1:i} = 0; ${1:i} < ${2:n}; ${1:i}++) {\n\t${0}\n}",
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: "for (int i = 0; i < n; i++) loop",
+              range,
+              filterText: "for fori loop",
+              sortText: "0004",
+            },
+            {
+              label: "foreach",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: "for (${1:int} ${2:item} : ${3:collection}) {\n\t${0}\n}",
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: "Enhanced for-each loop",
+              range,
+              filterText: "for foreach enhanced",
+              sortText: "0005",
+            },
+            {
+              label: "scanner",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: "Scanner sc = new Scanner(System.in);",
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: "Scanner sc = new Scanner(System.in);",
+              range,
+              filterText: "sc scanner input",
+              sortText: "0006",
+            },
+            {
+              label: "arraylist",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: "ArrayList<${1:Integer}> ${2:list} = new ArrayList<>();",
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: "Create an ArrayList",
+              range,
+              filterText: "arraylist list al",
+              sortText: "0007",
+            },
+            {
+              label: "hashmap",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: "HashMap<${1:String}, ${2:Integer}> ${3:map} = new HashMap<>();",
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: "Create a HashMap",
+              range,
+              filterText: "hashmap map hm",
+              sortText: "0008",
+            },
+            {
+              label: "hashset",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: "HashSet<${1:Integer}> ${2:set} = new HashSet<>();",
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: "Create a HashSet",
+              range,
+              filterText: "hashset set hs",
+              sortText: "0009",
+            },
+            {
+              label: "stack",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: "Stack<${1:Integer}> ${2:stack} = new Stack<>();",
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: "Create a Stack",
+              range,
+              filterText: "stack stk",
+              sortText: "0010",
+            },
+            {
+              label: "queue",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: "Queue<${1:Integer}> ${2:queue} = new LinkedList<>();",
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: "Create a Queue (backed by LinkedList)",
+              range,
+              filterText: "queue que",
+              sortText: "0011",
+            },
+            {
+              label: "priorityqueue",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: "PriorityQueue<${1:Integer}> ${2:pq} = new PriorityQueue<>();",
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: "Create a PriorityQueue (min-heap)",
+              range,
+              filterText: "priorityqueue pq heap",
+              sortText: "0012",
+            },
+            {
+              label: "stringbuilder",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: "StringBuilder ${1:sb} = new StringBuilder();",
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: "Create a StringBuilder",
+              range,
+              filterText: "stringbuilder sb builder",
+              sortText: "0013",
+            },
+            {
+              label: "ifelse",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: "if (${1:condition}) {\n\t${2}\n} else {\n\t${0}\n}",
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: "if-else block",
+              range,
+              filterText: "if ifelse",
+              sortText: "0014",
+            },
+            {
+              label: "while",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: "while (${1:condition}) {\n\t${0}\n}",
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: "while loop",
+              range,
+              filterText: "while loop",
+              sortText: "0015",
+            },
+            {
+              label: "trycatch",
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: "try {\n\t${1}\n} catch (Exception ${2:e}) {\n\t${0}\n}",
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: "try-catch block",
+              range,
+              filterText: "try trycatch exception",
+              sortText: "0016",
+            },
+          );
+        }
 
         return { suggestions };
       },
