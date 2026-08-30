@@ -289,7 +289,13 @@ export async function executeJavaCode(
 
         const timer = setTimeout(() => {
           timedOut = true;
-          child.kill("SIGKILL");
+          if (process.platform === "win32" && child.pid) {
+            exec(`taskkill /pid ${child.pid} /T /F`, () => {
+              resolve({ stdout, stderr: "Time Limit Exceeded (Infinite Loop).", timedOut: true, exitCode: 124 });
+            });
+          } else {
+            child.kill("SIGKILL");
+          }
         }, timeoutMs);
 
         if (tc.input) {

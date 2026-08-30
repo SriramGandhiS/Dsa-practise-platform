@@ -436,6 +436,39 @@ export function analyzeJavaCodeLive(code: string): EditorMarker[] {
       }
     }
 
+    // D. Accidental Semicolon after while / for loop: while(num > 0); or for(...);
+    if ((t.value === "while" || t.value === "for") && next && next.value === "(") {
+      const isDoWhile = t.value === "while" && prev && prev.value === "}";
+      if (!isDoWhile) {
+        let depth = 1;
+        let closeIndex = -1;
+        for (let j = i + 2; j < tokens.length; j++) {
+          if (tokens[j].value === "(") depth++;
+          else if (tokens[j].value === ")") {
+            depth--;
+            if (depth === 0) {
+              closeIndex = j;
+              break;
+            }
+          }
+        }
+
+        if (closeIndex !== -1 && closeIndex + 1 < tokens.length) {
+          const afterParen = tokens[closeIndex + 1];
+          if (afterParen.value === ";") {
+            rawMarkers.push({
+              startLineNumber: afterParen.line,
+              startColumn: afterParen.col,
+              endLineNumber: afterParen.line,
+              endColumn: afterParen.endCol,
+              message: `Empty statement ';' immediately after '${t.value}(...)' creates an infinite loop or detached block. Remove the ';' after '${t.value}(...)'.`,
+              severity: 8,
+            });
+          }
+        }
+      }
+    }
+
     // D. Array .length() vs String .length confusion
     if (t.type === "IDENTIFIER" && next && next.value === ".") {
       const varType = symbolTypeMap.get(t.value);
