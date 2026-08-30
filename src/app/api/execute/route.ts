@@ -26,6 +26,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Code is required." }, { status: 400 });
       }
       const runResult = await executeJavaCode(code, [{ id: 1, input: customInput, expected: "" }], "custom-sandbox");
+      if (!runResult.compileError && !runResult.runtimeError) {
+        runResult.success = true;
+        runResult.status = "ACCEPTED";
+      }
       return NextResponse.json(runResult);
     }
 

@@ -89,6 +89,24 @@ function buildExecutableCode(userCode: string, className: string): string {
     return userCode;
   }
 
+  const hasClass = /\b(public\s+)?class\s+[A-Za-z0-9_$]+/i.test(userCode);
+
+  // If no class exists, user is writing rapid naked statements! Auto-wrap in matching runner class
+  if (!hasClass) {
+    return `
+import java.util.*;
+import java.io.*;
+import java.math.*;
+
+public class ${className}Runner {
+    public static void main(String[] args) throws Exception {
+        Scanner sc = new Scanner(System.in);
+        ${userCode}
+    }
+}
+`;
+  }
+
   // Method-only support: wrap the method in a class with a reflection-based dispatcher
   const userClassReplaced = userCode.replace(new RegExp(`public\\s+class\\s+${className}`, "g"), `class ${className}`);
 
