@@ -106,7 +106,7 @@ export function analyzeJavaCodeLive(code: string): EditorMarker[] {
     for (const item of classCaseErrors) {
       let m: RegExpExecArray | null;
       while ((m = item.regex.exec(line)) !== null) {
-        if (!isInsideQuotes(line, m.index)) {
+        if (!isInsideCommentOrQuotes(line, m.index)) {
           rawMarkers.push({
             startLineNumber: lineNum,
             startColumn: m.index + 1,
@@ -126,7 +126,7 @@ export function analyzeJavaCodeLive(code: string): EditorMarker[] {
       const varName = access[1];
       const member = access[2];
 
-      if (!isInsideQuotes(line, access.index)) {
+      if (!isInsideCommentOrQuotes(line, access.index)) {
         const varType = symbolTypeMap.get(varName);
 
         // 1. If it's a primitive type (int, long, double, boolean, char, etc.) -> CANNOT DEREFERENCE
@@ -173,7 +173,7 @@ export function analyzeJavaCodeLive(code: string): EditorMarker[] {
     while ((arrOnStr = arrayOnStringMatch.exec(line)) !== null) {
       const varName = arrOnStr[1];
       const varType = symbolTypeMap.get(varName);
-      if (varType === "String" && !isInsideQuotes(line, arrOnStr.index)) {
+      if (varType === "String" && !isInsideCommentOrQuotes(line, arrOnStr.index)) {
         rawMarkers.push({
           startLineNumber: lineNum,
           startColumn: arrOnStr.index + 1,
@@ -201,7 +201,7 @@ export function analyzeJavaCodeLive(code: string): EditorMarker[] {
         continue;
       }
 
-      if (!isInsideQuotes(line, sym.index)) {
+      if (!isInsideCommentOrQuotes(line, sym.index)) {
         if (nextChar === "." || nextChar === "[" || nextChar.startsWith("=")) {
           rawMarkers.push({
             startLineNumber: lineNum,
@@ -229,7 +229,7 @@ export function analyzeJavaCodeLive(code: string): EditorMarker[] {
     for (const item of methodCaseErrors) {
       let m: RegExpExecArray | null;
       while ((m = item.regex.exec(line)) !== null) {
-        if (!isInsideQuotes(line, m.index)) {
+        if (!isInsideCommentOrQuotes(line, m.index)) {
           rawMarkers.push({
             startLineNumber: lineNum,
             startColumn: m.index + 1,
@@ -242,39 +242,46 @@ export function analyzeJavaCodeLive(code: string): EditorMarker[] {
       }
     }
 
-    // F. Missing Semicolon Check on Statements
+    // F. Missing Semicolon Check on Statements (Strip inline comments first)
+    let codePart = trimmed;
+    const cIdx = trimmed.indexOf("//");
+    if (cIdx !== -1) {
+      codePart = trimmed.slice(0, cIdx).trim();
+    }
+
     if (
-      !trimmed.endsWith(";") &&
-      !trimmed.endsWith("{") &&
-      !trimmed.endsWith("}") &&
-      !trimmed.endsWith(":") &&
-      !trimmed.startsWith("if") &&
-      !trimmed.startsWith("else") &&
-      !trimmed.startsWith("for") &&
-      !trimmed.startsWith("while") &&
-      !trimmed.startsWith("public") &&
-      !trimmed.startsWith("class") &&
-      !trimmed.startsWith("@") &&
-      !trimmed.endsWith(",") &&
-      !trimmed.endsWith("(") &&
-      !trimmed.endsWith("+") &&
-      (trimmed.startsWith("int ") ||
-        trimmed.startsWith("String ") ||
-        trimmed.startsWith("boolean ") ||
-        trimmed.startsWith("double ") ||
-        trimmed.startsWith("long ") ||
-        trimmed.startsWith("char ") ||
-        trimmed.startsWith("Scanner ") ||
-        trimmed.startsWith("System.out.") ||
-        trimmed.startsWith("return ") ||
-        trimmed.endsWith("++") ||
-        trimmed.endsWith("--"))
+      codePart &&
+      !codePart.endsWith(";") &&
+      !codePart.endsWith("{") &&
+      !codePart.endsWith("}") &&
+      !codePart.endsWith(":") &&
+      !codePart.startsWith("if") &&
+      !codePart.startsWith("else") &&
+      !codePart.startsWith("for") &&
+      !codePart.startsWith("while") &&
+      !codePart.startsWith("public") &&
+      !codePart.startsWith("class") &&
+      !codePart.startsWith("@") &&
+      !codePart.endsWith(",") &&
+      !codePart.endsWith("(") &&
+      !codePart.endsWith("+") &&
+      (codePart.startsWith("int ") ||
+        codePart.startsWith("String ") ||
+        codePart.startsWith("boolean ") ||
+        codePart.startsWith("double ") ||
+        codePart.startsWith("long ") ||
+        codePart.startsWith("char ") ||
+        codePart.startsWith("Scanner ") ||
+        codePart.startsWith("System.out.") ||
+        codePart.startsWith("return ") ||
+        codePart.endsWith("++") ||
+        codePart.endsWith("--"))
     ) {
       rawMarkers.push({
         startLineNumber: lineNum,
-        startColumn: line.length,
+        startColumn: codePart.length + 1,
         endLineNumber: lineNum,
-        endColumn: line.length + 1,
+        endColumn: codePart.length + 2,
         message: "';' expected",
         severity: 8,
       });
@@ -284,7 +291,7 @@ export function analyzeJavaCodeLive(code: string): EditorMarker[] {
     const assignInCond = /\b(if|while)\s*\(\s*([a-zA-Z0-9_$]+)\s*=\s*([a-zA-Z0-9_$]+)\s*\)/g;
     let condMatch: RegExpExecArray | null;
     while ((condMatch = assignInCond.exec(line)) !== null) {
-      if (!isInsideQuotes(line, condMatch.index)) {
+      if (!isInsideCommentOrQuotes(line, condMatch.index)) {
         rawMarkers.push({
           startLineNumber: lineNum,
           startColumn: condMatch.index + 1,
@@ -308,7 +315,7 @@ export function analyzeJavaCodeLive(code: string): EditorMarker[] {
     const line = lines[lIdx];
 
     for (let cIdx = 0; cIdx < line.length; cIdx++) {
-      if (isInsideQuotes(line, cIdx)) continue;
+      if (isInsideCommentOrQuotes(line, cIdx)) continue;
       if (line.slice(cIdx, cIdx + 2) === "//") break;
 
       const char = line[cIdx];
@@ -384,16 +391,19 @@ export function analyzeJavaCodeLive(code: string): EditorMarker[] {
   return markers;
 }
 
-function isInsideQuotes(line: string, index: number): boolean {
+function isInsideCommentOrQuotes(line: string, index: number): boolean {
   let insideDouble = false;
   let insideSingle = false;
-  for (let i = 0; i < index; i++) {
+  for (let i = 0; i < line.length; i++) {
     const ch = line[i];
     if (ch === '"' && (i === 0 || line[i - 1] !== "\\")) {
       insideDouble = !insideDouble;
     } else if (ch === "'" && (i === 0 || line[i - 1] !== "\\")) {
       insideSingle = !insideSingle;
+    } else if (!insideDouble && !insideSingle && ch === "/" && line[i + 1] === "/") {
+      return index >= i;
     }
+    if (i >= index) break;
   }
   return insideDouble || insideSingle;
 }
