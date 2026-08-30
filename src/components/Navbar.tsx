@@ -32,7 +32,7 @@ export function Navbar() {
     { href: "/", label: "Home" },
     { href: "/questions", label: "Problems" },
     { href: "/compiler", label: "Compiler" },
-    { href: "/rapid-compiler", label: "⚡ Rapid Compiler" },
+    { href: "/rapid-compiler", label: "Rapid Compiler" },
     { href: "/history", label: "History" },
   ];
 
