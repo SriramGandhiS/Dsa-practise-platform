@@ -48,10 +48,41 @@ export default function RapidCompilerPage() {
     window.addEventListener("mouseup", handleMouseUp);
   }, []);
 
-  // Monaco autocomplete setup for sys / sysout / sout / sop
+  // Monaco autocomplete setup for sys / sysout / sout / sop + Vibrant Theme
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
+
+    // Define vibrant high-contrast syntax theme
+    monaco.editor.defineTheme("programiz-vibrant", {
+      base: "vs-dark",
+      inherit: true,
+      rules: [
+        { token: "keyword", foreground: "c678dd", fontStyle: "bold" },
+        { token: "keyword.java", foreground: "c678dd", fontStyle: "bold" },
+        { token: "type", foreground: "4fc1ff", fontStyle: "bold" },
+        { token: "type.identifier", foreground: "61afef" },
+        { token: "class", foreground: "61afef", fontStyle: "bold" },
+        { token: "string", foreground: "98c379" },
+        { token: "string.escape", foreground: "56b6c2" },
+        { token: "number", foreground: "d19a66" },
+        { token: "comment", foreground: "7f848e", fontStyle: "italic" },
+        { token: "delimiter", foreground: "abb2bf" },
+        { token: "delimiter.bracket", foreground: "ffd700" },
+        { token: "identifier", foreground: "e5c07b" },
+      ],
+      colors: {
+        "editor.background": "#1e1f26",
+        "editor.foreground": "#e1e4e8",
+        "editorCursor.foreground": "#528bff",
+        "editor.lineHighlightBackground": "#282a3640",
+        "editorLineNumber.foreground": "#495162",
+        "editorLineNumber.activeForeground": "#61afef",
+        "editor.selectionBackground": "#3e4451",
+      },
+    });
+
+    monaco.editor.setTheme("programiz-vibrant");
 
     monaco.languages.registerCompletionItemProvider("java", {
       triggerCharacters: ["s", "S", "p", "f", "."],
@@ -245,18 +276,18 @@ export default function RapidCompilerPage() {
             </div>
           </div>
 
-          {/* Monaco Editor */}
+          {/* Monaco Editor with Vibrant High-Contrast Syntax Colors */}
           <div className="flex-1 relative">
             <Editor
               height="100%"
               defaultLanguage="java"
-              theme="vs-dark"
+              theme="programiz-vibrant"
               value={code}
               onChange={(v) => setCode(v || "")}
               onMount={handleEditorDidMount}
               options={{
-                fontSize: 17,
-                lineHeight: 28,
+                fontSize: 18,
+                lineHeight: 29,
                 fontFamily: "'Fira Code', 'Consolas', 'Courier New', monospace",
                 fontLigatures: true,
                 minimap: { enabled: false },
@@ -272,6 +303,7 @@ export default function RapidCompilerPage() {
                 matchBrackets: "always",
                 autoClosingBrackets: "always",
                 autoClosingQuotes: "always",
+                bracketPairColorization: { enabled: true },
                 quickSuggestions: true,
                 suggestOnTriggerCharacters: true,
                 padding: { top: 12, bottom: 12 },
@@ -295,7 +327,7 @@ export default function RapidCompilerPage() {
           className="flex flex-col overflow-hidden flex-1 bg-[#17181c]"
         >
           {/* Output Header Bar */}
-          <div className="flex items-center justify-between px-4 py-2 bg-[#1b1c23] border-b border-[#2a2b36] shrink-0 h-11">
+          <div className="flex items-center justify-between px-4 py-2 bg-[#1b1c23] border-b border-[#2a2b36] shrink-0 h-10">
             <span className="font-sans text-xs font-bold text-[#c9d1d9] tracking-wide">
               Output
             </span>
