@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Editor, { OnMount } from "@monaco-editor/react";
 import Link from "next/link";
 import confetti from "canvas-confetti";
@@ -22,11 +22,14 @@ import {
   ChevronUp,
   ZoomIn,
   ZoomOut,
+  PenTool,
+  Code2,
 } from "lucide-react";
 import { analyzeJavaCodeLive, EditorMarker } from "@/lib/java-diagnostics";
 import { getFamilyForSlug } from "@/lib/problem-families";
 import { getDiagramForSlug } from "@/lib/problem-diagrams";
 import StepVisualizer from "@/components/StepVisualizer";
+import ScratchPad from "@/components/ScratchPad";
 
 interface QuestionData {
   id: string;
@@ -51,11 +54,14 @@ interface QuestionData {
 
 export default function PracticePage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const slug = params?.slug as string;
+  const isReviewMode = searchParams?.get("mode") === "review";
 
   const [question, setQuestion] = useState<QuestionData | null>(null);
   const [code, setCode] = useState<string>("");
   const [nextQuestionSlug, setNextQuestionSlug] = useState<string | null>(null);
+  const [editorView, setEditorView] = useState<"code" | "scratchpad">("code");
 
   // Monaco and live markers
   const editorRef = useRef<any>(null);
@@ -385,6 +391,32 @@ export default function PracticePage() {
               Ctrl+S
             </kbd>
           </button>
+
+          {/* Code vs Scratch Pad Toggle */}
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-full border border-slate-200 text-xs font-semibold">
+            <button
+              onClick={() => setEditorView("code")}
+              className={`px-3 py-1 rounded-full flex items-center gap-1.5 transition-all ${
+                editorView === "code"
+                  ? "bg-white text-slate-900 font-bold shadow-2xs"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              <Code2 className="w-3.5 h-3.5" />
+              <span>Editor</span>
+            </button>
+            <button
+              onClick={() => setEditorView("scratchpad")}
+              className={`px-3 py-1 rounded-full flex items-center gap-1.5 transition-all ${
+                editorView === "scratchpad"
+                  ? "bg-white text-slate-900 font-bold shadow-2xs"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              <PenTool className="w-3.5 h-3.5" />
+              <span>Scratch Pad</span>
+            </button>
+          </div>
         </div>
 
         {/* Right: Problems indicator, Reset & Timer */}
@@ -451,43 +483,60 @@ export default function PracticePage() {
         </div>
       </div>
 
+      {/* Review Mode Banner if accessed from Review Queue */}
+      {isReviewMode && (
+        <div className="bg-blue-50 border-b border-blue-200 px-6 py-2 flex items-center justify-between text-xs text-blue-900">
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-4 h-4 text-blue-600" />
+            <span>
+              <strong>Spaced Repetition Review:</strong> Test your active recall! Try solving this problem from memory without looking at reference solutions.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* MAIN WORKSPACE WITH DRAGGABLE SPLITTER */}
       <div ref={containerRef} className="flex-1 flex overflow-hidden relative select-none">
-        {/* LEFT COLUMN: RESIZABLE MONACO EDITOR */}
+        {/* LEFT COLUMN: RESIZABLE MONACO EDITOR OR SCRATCH PAD */}
         <div
           style={{ width: `${leftWidth}%` }}
           className="flex flex-col border-r border-slate-200 bg-white overflow-hidden shrink-0 relative"
         >
-          {/* Full Height Editor */}
-          <div className="flex-1 relative bg-white">
-            <Editor
-              height="100%"
-              defaultLanguage="java"
-              theme="light"
-              value={code}
-              onChange={(v) => setCode(v || "")}
-              onMount={handleEditorDidMount}
-              options={{
-                fontSize: editorFontSize,
-                lineHeight: Math.round(editorFontSize * 1.55),
-                fontFamily: "Consolas, 'Courier New', monospace",
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                lineNumbers: "on",
-                automaticLayout: true,
-                tabSize: 4,
-                wordWrap: "on",
-                renderLineHighlight: "all",
-                glyphMargin: true,
-                folding: true,
-                matchBrackets: "always",
-                autoClosingBrackets: "always",
-                autoClosingQuotes: "always",
-                quickSuggestions: true,
-                suggestOnTriggerCharacters: true,
-              }}
-            />
-          </div>
+          {editorView === "code" ? (
+            <div className="flex-1 relative bg-white">
+              <Editor
+                height="100%"
+                defaultLanguage="java"
+                theme="light"
+                value={code}
+                onChange={(v) => setCode(v || "")}
+                onMount={handleEditorDidMount}
+                options={{
+                  fontSize: editorFontSize,
+                  lineHeight: Math.round(editorFontSize * 1.55),
+                  fontFamily: "Consolas, 'Courier New', monospace",
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                  lineNumbers: "on",
+                  automaticLayout: true,
+                  tabSize: 4,
+                  wordWrap: "on",
+                  renderLineHighlight: "all",
+                  glyphMargin: true,
+                  folding: true,
+                  matchBrackets: "always",
+                  autoClosingBrackets: "always",
+                  autoClosingQuotes: "always",
+                  quickSuggestions: true,
+                  suggestOnTriggerCharacters: true,
+                }}
+              />
+            </div>
+          ) : (
+            <div className="flex-1 relative bg-white overflow-hidden">
+              <ScratchPad slug={slug} />
+            </div>
+          )}
 
           {/* Collapsible Problems Drawer */}
           {showProblemsDrawer && liveMarkers.length > 0 && (

@@ -61,6 +61,11 @@ export function Navbar() {
       desc: "Type & fix 1-line bugs or fill in missing DSA logic directly in the code editor.",
     },
     {
+      href: "/reviews",
+      label: "Reviews",
+      desc: "Spaced repetition review queue (3d, 7d, 21d) to lock algorithms into long-term memory.",
+    },
+    {
       href: "/compiler",
       label: "Compiler",
       desc: "Standard Java compiler with Main class sandbox for testing full programs.",

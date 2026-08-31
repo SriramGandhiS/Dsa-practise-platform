@@ -104,6 +104,15 @@ export default function HomePage() {
       description: "Write raw Java code with interactive terminal input.",
     },
     {
+      title: "Review Queue",
+      href: "/reviews",
+      tag: "Spaced Repetition",
+      tagColor: "bg-indigo-50 text-indigo-700 border-indigo-200",
+      icon: HistoryIcon,
+      iconBg: "bg-indigo-50 text-indigo-600",
+      description: "Re-solve algorithms at optimal 3d, 7d & 21d memory intervals.",
+    },
+    {
       title: "Problems Catalog",
       href: "/questions",
       tag: "50 Problems",
@@ -163,7 +172,7 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
             {learningModes.map((mode) => {
               const IconComponent = mode.icon;
               return (
