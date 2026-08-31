@@ -102,7 +102,7 @@ export default function RapidCompilerPage() {
 
     monaco.languages.registerCompletionItemProvider("java", {
       triggerCharacters: [".", "s", "S", "p", "f", "n", "a", "h", "l"],
-      provideCompletionItems: (model, position) => {
+      provideCompletionItems: (model: any, position: any) => {
         const word = model.getWordUntilPosition(position);
         const range = {
           startLineNumber: position.lineNumber,
