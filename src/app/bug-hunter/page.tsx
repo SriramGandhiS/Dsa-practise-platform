@@ -172,7 +172,7 @@ export default function BugHunterPage() {
     if (isRunning) return;
     setIsRunning(true);
     setTerminalHistory([
-      { type: "output", text: "⚙️ Compiling and executing your fix..." },
+      { type: "output", text: "Compiling and executing your code..." },
     ]);
 
     try {
@@ -190,12 +190,12 @@ export default function BugHunterPage() {
 
       if (data.compileError) {
         setTerminalHistory([
-          { type: "error", text: "❌ Compilation Error:\n" + data.compileError },
+          { type: "error", text: "Compilation Error:\n" + data.compileError },
         ]);
         setIsPassed(false);
       } else if (data.runtimeError) {
         setTerminalHistory([
-          { type: "error", text: "❌ Runtime Exception:\n" + data.runtimeError },
+          { type: "error", text: "Runtime Exception:\n" + data.runtimeError },
         ]);
         setIsPassed(false);
       } else {

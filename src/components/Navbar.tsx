@@ -3,13 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Info } from "lucide-react";
 
 interface NavLinkItem {
   href: string;
   label: string;
   desc: string;
-  badge?: string;
 }
 
 export function Navbar() {
@@ -46,7 +44,6 @@ export function Navbar() {
       href: "/roadmap",
       label: "Roadmap",
       desc: "Visual learning path: Numbers → Strings → Arrays → Sorting. Know exactly what to learn next.",
-      badge: "Path",
     },
     {
       href: "/questions",
@@ -57,13 +54,11 @@ export function Navbar() {
       href: "/challenges",
       label: "Challenges",
       desc: "2-minute Java brain teasers uncovering common tricks, traps, and interview gotchas.",
-      badge: "Quiz",
     },
     {
       href: "/bug-hunter",
       label: "Bug Hunter",
-      desc: "Spot logic bugs, fix syntax traps, and fill in missing DSA code lines.",
-      badge: "Debug",
+      desc: "Type & fix 1-line bugs or fill in missing DSA logic directly in the code editor.",
     },
     {
       href: "/compiler",
@@ -74,7 +69,6 @@ export function Navbar() {
       href: "/rapid-compiler",
       label: "Rapid Compiler",
       desc: "Zero-boilerplate instant Java runner with interactive terminal input.",
-      badge: "Fast",
     },
     {
       href: "/history",
@@ -88,16 +82,16 @@ export function Navbar() {
       <div className="w-full flex h-14 items-center justify-between px-6">
         {/* Left: Brand and Nav Links Grouped Together */}
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2 group">
+          <Link href="/" className="flex items-center gap-2.5 group">
             <div className="h-7 w-7 rounded-lg bg-slate-900 flex items-center justify-center text-white font-extrabold text-xs group-hover:bg-blue-600 transition-colors">
-              J
+              P
             </div>
-            <span className="font-bold text-sm tracking-tight text-slate-900 group-hover:text-blue-600 transition-colors">
-              Java DSA Practice
+            <span className="font-extrabold text-base tracking-tight text-slate-900 group-hover:text-blue-600 transition-colors">
+              Practico
             </span>
           </Link>
 
-          {/* Navigation Links with Info Tooltip on Hover */}
+          {/* Navigation Links with Hover Tooltip */}
           <nav className="flex items-center gap-1">
             {navLinks.map((link) => {
               const isActive =
@@ -107,29 +101,19 @@ export function Navbar() {
                 <div key={link.href} className="relative group/nav flex items-center">
                   <Link
                     href={link.href}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                       isActive
-                        ? "bg-slate-100 text-slate-900 shadow-2xs"
+                        ? "bg-slate-100 text-slate-900 font-bold shadow-2xs"
                         : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                     }`}
                   >
-                    <span>{link.label}</span>
-                    {link.badge && (
-                      <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded-md bg-blue-100 text-blue-700">
-                        {link.badge}
-                      </span>
-                    )}
-                    {/* Info (i) Icon */}
-                    <span className="text-slate-400 group-hover/nav:text-slate-700 transition-colors">
-                      <Info className="w-3 h-3 opacity-60 group-hover/nav:opacity-100" />
-                    </span>
+                    {link.label}
                   </Link>
 
-                  {/* Hover Tooltip Box */}
+                  {/* Clean Hover Tooltip Box */}
                   <div className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 p-2.5 bg-slate-900 text-white rounded-xl shadow-xl opacity-0 invisible group-hover/nav:opacity-100 group-hover/nav:visible transition-all duration-200 z-50 text-center">
-                    <div className="text-[11px] font-bold text-blue-300 mb-0.5 flex items-center justify-center gap-1">
-                      <Info className="w-3 h-3 text-blue-400" />
-                      {link.label} Mode
+                    <div className="text-[11px] font-bold text-blue-300 mb-0.5">
+                      {link.label}
                     </div>
                     <div className="text-[10px] text-slate-300 leading-snug">
                       {link.desc}

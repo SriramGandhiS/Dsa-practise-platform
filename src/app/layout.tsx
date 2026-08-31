@@ -7,9 +7,9 @@ import { Navbar } from "@/components/Navbar";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Java DSA Placement Trainer — Personal Placement & Coding Coach",
+  title: "Practico — Java DSA Practice Platform",
   description:
-    "Personalized Java & DSA training platform engineered to take beginners with weak Java fundamentals and build placement-ready coding confidence.",
+    "Clean, interactive Java & DSA practice platform engineered to build placement-ready coding confidence.",
 };
 
 export default function RootLayout({
