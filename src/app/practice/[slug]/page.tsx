@@ -26,6 +26,7 @@ import {
 import { analyzeJavaCodeLive, EditorMarker } from "@/lib/java-diagnostics";
 import { getFamilyForSlug } from "@/lib/problem-families";
 import { getDiagramForSlug } from "@/lib/problem-diagrams";
+import StepVisualizer from "@/components/StepVisualizer";
 
 interface QuestionData {
   id: string;
@@ -1070,6 +1071,12 @@ export default function PracticePage() {
                   <span className="font-bold text-slate-900 block mb-1">Approach:</span>
                   <p>{question.simpleExplanation}</p>
                 </div>
+
+                {/* Step-by-Step Code Visualizer */}
+                <StepVisualizer
+                  code={question.simpleSolution}
+                  input={question.visibleTests?.[0]?.input || ""}
+                />
 
                 {/* Syntax-Highlighted Code Container */}
                 <div className="rounded-2xl border border-slate-200 bg-slate-950 text-slate-50 overflow-hidden shadow-xs">
