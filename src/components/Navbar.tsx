@@ -60,6 +60,12 @@ export function Navbar() {
       badge: "Quiz",
     },
     {
+      href: "/bug-hunter",
+      label: "Bug Hunter",
+      desc: "Spot logic bugs, fix syntax traps, and fill in missing DSA code lines.",
+      badge: "Debug",
+    },
+    {
       href: "/compiler",
       label: "Compiler",
       desc: "Standard Java compiler with Main class sandbox for testing full programs.",

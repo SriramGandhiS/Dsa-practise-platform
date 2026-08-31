@@ -17,6 +17,7 @@ import {
   Sparkles,
   Play,
   Trophy,
+  Bug,
 } from "lucide-react";
 
 interface QuestionItem {
@@ -79,6 +80,16 @@ export default function HomePage() {
       iconBg: "bg-blue-50 text-blue-600",
       description: "Follow the structured path: Numbers → Strings → Arrays → Sorting.",
       tooltip: "Visual step-by-step progression tree. Know exactly which topic and problem to solve next without feeling lost.",
+    },
+    {
+      title: "Bug Hunter",
+      href: "/bug-hunter",
+      tag: "Debug & Fill",
+      tagColor: "bg-rose-100 text-rose-700 border-rose-200",
+      icon: Bug,
+      iconBg: "bg-rose-50 text-rose-600",
+      description: "Find the 1-line bug or fill missing DSA logic blanks.",
+      tooltip: "Practice code debugging and fill-in-the-blank challenges! Spot logic traps, off-by-one errors, and syntax bugs.",
     },
     {
       title: "Gotcha Challenges",
